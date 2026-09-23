@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>نظام الحضور والانصراف الذكي</title>
+  
+  <!-- مكتبة قراءة QR Code -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 14px;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    /* عرض ID الموظف */
+    .id-badge-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px dashed var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .id-badge {
+      font-weight: 700;
+      color: #60a5fa;
+      letter-spacing: 1px;
+      font-family: monospace;
+      font-size: 1rem;
+    }
+
+    /* لوحة الحالة والتايمر */
+    .status-panel {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f172a;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #64748b;
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.active {
+      background-color: var(--success);
+      box-shadow: 0 0 14px var(--success);
+    }
+
+    .timer-display {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* شاشة الكاميرا */
+    #reader-container {
+      width: 100%;
+      min-height: 260px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    #reader {
+      width: 100% !important;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-submit { background-color: #2563eb; color: white; }
+    .btn-primary { background-color: var(--accent); color: white; }
+    .btn-danger { background-color: var(--danger); color: white; }
+
+    /* التنبيهات */
+    .alert {
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      text-align: center;
+      word-break: break-word;
+      display: none;
+    }
+
+    .alert-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+    .alert-error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
+    .alert-warning { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid #eab308; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- تنبيه خاص بـ HTTPS إذا كان الرابط غير آمن -->
+    <div id="httpsWarning" class="alert alert-warning">
+      ⚠️ الكاميرا تتطلب تشغيل الصفحة عبر رابط آمن يبدأ بـ <b>HTTPS</b> (مثل GitHub Pages).
+    </div>
+
+    <!-- نموذج تسجيل بيانات الموظف مع زر Submit -->
+    <form id="employeeForm" class="card" onsubmit="handleFormSubmit(event)">
+      <h1>بيانات الموظف</h1>
+      
+      <!-- إظهار رقم الـ ID المنشأ والمحفوظ -->
+      <div class="id-badge-container">
+        <span style="font-size: 0.85rem; color: var(--text-muted);">الرمز المولد (ID):</span>
+        <span class="id-badge" id="empIdDisplay">لم يتم التوليد بعد</span>
+      </div>
+
+      <div class="form-group">
+        <label for="empName">اسم الموظف</label>
+        <input type="text" id="empName" placeholder="أدخل اسمك الكامل" required>
+      </div>
+
+      <div class="form-group">
+        <label for="empTitle">المسمى الوظيفي</label>
+        <input type="text" id="empTitle" placeholder="مثال: مهندس برمجيات / محاسب" required>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        💾 حفظ وتأكيد البيانات (Submit)
+      </button>
+    </form>
+
+    <!-- لوحة التايمر ومؤشر الدخول -->
+    <div class="card status-panel">
+      <div class="status-badge">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">خارج الدوام</span>
+      </div>
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+    </div>
+
+    <!-- رسائل التنبيه والخطأ -->
+    <div id="alertBox" class="alert"></div>
+
+    <!-- قسم الكاميرا والمسح -->
+    <div class="card">
+      <div id="reader-container">
+        <div id="reader"></div>
+      </div>
+      <button id="scanBtn" class="btn-primary" onclick="toggleCamera()" style="margin-top: 10px;" disabled>
+        📷 تشغيل الكاميرا لمسح الرمز
+      </button>
+      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 6px;">
+        (يرجى الضغط على زر حفظ وتأكيد البيانات أولاً لتفعيل الكاميرا)
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================================
+    // 1. رابط الـ Google Apps Script
+    // ========================================================
+    const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec";
+
+    // المتغيرات وعناصر الواجهة
+    const empNameInput = document.getElementById("empName");
+    const empTitleInput = document.getElementById("empTitle");
+    const empIdDisplay = document.getElementById("empIdDisplay");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const alertBox = document.getElementById("alertBox");
+    const scanBtn = document.getElementById("scanBtn");
+    const lockWarning = document.getElementById("lockWarning");
+    const readerContainer = document.getElementById("reader-container");
+
+    let timerInterval = null;
+    let html5QrCode = null;
+    let isCameraActive = false;
+    let currentEmpId = "";
+
+    // ========================================================
+    // 2. تحميل البيانات المحفوظة مسبقاً من كاش المتصفح (localStorage)
+    // ========================================================
+    window.addEventListener("DOMContentLoaded", () => {
+      // التحقق من تشغيل الصفحة عبر HTTPS
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        document.getElementById("httpsWarning").style.display = "block";
+      }
+
+      const savedId = localStorage.getItem("emp_id");
+      const savedName = localStorage.getItem("emp_name");
+      const savedTitle = localStorage.getItem("emp_title");
+
+      // إذا كانت البيانات مسجلة مسبقاً في الكاش، نقوم بتعبئتها وتفعيل زر الكاميرا فوراً
+      if (savedId && savedName && savedTitle) {
+        currentEmpId = savedId;
+        empIdDisplay.innerText = currentEmpId;
+        empNameInput.value = savedName;
+        empTitleInput.value = savedTitle;
+        unlockScanner();
+      }
+
+      // استعادة حالة الدوام والتايمر
+      restoreWorkState();
+    });
+
+    // ========================================================
+    // 3. معالجة زر Submit وحفظ البيانات والرمز في الكاش
+    // ========================================================
+    function handleFormSubmit(event) {
+      event.preventDefault();
+
+      const name = empNameInput.value.trim();
+      const title = empTitleInput.value.trim();
+
+      if (!name || !title) {
+        showAlert("يرجى ملء كافة الحقول بشكل صحيح", "error");
+        return;
+      }
+
+      // توليد ID جديد إذا لم يكن موجوداً من قبل في الكاش
+      if (!currentEmpId) {
+        currentEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
+      }
+
+      // حفظ البيانات والرمز المولد في localStorage (كاش المتصفح)
+      localStorage.setItem("emp_id", currentEmpId);
+      localStorage.setItem("emp_name", name);
+      localStorage.setItem("emp_title", title);
+
+      // تحديث الواجهة
+      empIdDisplay.innerText = currentEmpId;
+      showAlert(`تم حفظ البيانات وتثبيت الرمز (${currentEmpId}) بنجاح!`, "success");
+      
+      unlockScanner();
+    }
+
+    function unlockScanner() {
+      scanBtn.disabled = false;
+      lockWarning.style.display = "none";
+    }
+
+    // ========================================================
+    // 4. التايمر والمؤشر الضوئي
+    // ========================================================
+    function restoreWorkState() {
+      const checkInTime = localStorage.getItem("check_in_time");
+      if (checkInTime) {
+        setWorkActive(parseInt(checkInTime, 10));
+      } else {
+        setWorkInactive();
+      }
+    }
+
+    function setWorkActive(startTime) {
+      statusDot.classList.add("active");
+      statusText.innerText = "داخل الدوام (جاري الاحتساب)";
+
+      if (timerInterval) clearInterval(timerInterval);
+
+      const updateTimer = () => {
+        const diff = Date.now() - startTime;
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        timerDisplay.innerText = 
+          String(hours).padStart(2, '0') + ":" +
+          String(minutes).padStart(2, '0') + ":" +
+          String(seconds).padStart(2, '0');
+      };
+
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function setWorkInactive() {
+      statusDot.classList.remove("active");
+      statusText.innerText = "خارج الدوام";
+      if (timerInterval) clearInterval(timerInterval);
+      timerDisplay.innerText = "00:00:00";
+    }
+
+    // ========================================================
+    // 5. تشغيل وإيقاف الكاميرا
+    // ========================================================
+    async function toggleCamera() {
+      if (isCameraActive) {
+        await stopCamera();
+        return;
+      }
+
+      if (!currentEmpId) {
+        showAlert("يرجى الضغط على زر حفظ وتأكيد البيانات أولاً", "error");
+        return;
+      }
+
+      readerContainer.style.display = "block";
+      scanBtn.innerText = "⏳ جاري تشغيل الكاميرا...";
+      scanBtn.disabled = true;
+
+      try {
+        html5QrCode = new Html5Qrcode("reader");
+
+        const devices = await Html5Qrcode.getCameras();
+        let selectedCameraId = null;
+
+        if (devices && devices.length > 0) {
+          const backCam = devices.find(d => 
+            d.label.toLowerCase().includes("back") || 
+            d.label.toLowerCase().includes("rear") || 
+            d.label.toLowerCase().includes("environment")
+          );
+          selectedCameraId = backCam ? backCam.id : devices[devices.length - 1].id;
+        }
+
+        const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: "environment" };
+
+        await html5QrCode.start(
+          cameraConfig,
+          {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            aspectRatio: 1.0
+          },
+          onScanSuccess,
+          () => {}
+        );
+
+        isCameraActive = true;
+        scanBtn.innerText = "🛑 إيقاف الكاميرا";
+        scanBtn.className = "btn-danger";
+        scanBtn.disabled = false;
+
+      } catch (err) {
+        console.error("Camera Error:", err);
+        showAlert("خطأ في الكاميرا: " + (err.message || err.name || "تأكد من إذن الكاميرا وعمل HTTPS"), "error");
+        await stopCamera();
+      }
+    }
+
+    async function stopCamera() {
+      if (html5QrCode && isCameraActive) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {
+          console.warn("Cleanup error:", e);
+        }
+      }
+      isCameraActive = false;
+      readerContainer.style.display = "none";
+      scanBtn.innerText = "📷 تشغيل الكاميرا لمسح الرمز";
+      scanBtn.className = "btn-primary";
+      scanBtn.disabled = false;
+    }
+
+    // ========================================================
+    // 6. إرسال البيانات الكاملة عبر JSON إلى Google Sheets
+    // ========================================================
+    async function onScanSuccess(decodedText) {
+      await stopCamera();
+      showAlert("تم قراءة الرمز! جاري التحقق وتسجيل البيانات...", "success");
+
+      // إعداد كائن JSON متكامل للإرسال
+      const payload = {
+        employeeId: localStorage.getItem("emp_id"),
+        employeeName: localStorage.getItem("emp_name"),
+        jobTitle: localStorage.getItem("emp_title"),
+        qrData: decodedText,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === "SUCCESS") {
+          if (result.action === "CHECK_IN") {
+            const now = Date.now();
+            localStorage.setItem("check_in_time", now.toString());
+            setWorkActive(now);
+            showAlert(`تم تسجيل الدخول بنجاح! مرحباً ${payload.employeeName}`, "success");
+          } else if (result.action === "CHECK_OUT") {
+            localStorage.removeItem("check_in_time");
+            setWorkInactive();
+            showAlert(`تم تسجيل الانصراف. ساعات العمل اليوم: ${result.totalHours || "0"} ساعة.`, "success");
+          }
+        } else {
+          showAlert(result.message || "حدث خطأ من الخادم أثناء المعالجة", "error");
+        }
+      } catch (error) {
+        console.error(error);
+        showAlert("فشل إرسال البيانات إلى الخادم. تأكد من صحة الرابط والاتصال بالإنترنت.", "error");
+      }
+    }
+
+    function showAlert(msg, type) {
+      alertBox.innerText = msg;
+      alertBox.className = `alert alert-${type}`;
+      alertBox.style.display = "block";
+      setTimeout(() => {
+        alertBox.style.display = "none";
+      }, 7000);
+    }
+  </script>
+</body>
+</html>
