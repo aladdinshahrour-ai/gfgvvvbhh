@@ -161,7 +161,32 @@
       width: 100% !important;
     }
 
-    /* صندوق طباعة وعرض نتيجة الـ QR الممسوح */
+    /* خط فاصل أنيق */
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider:not(:empty)::before {
+      margin-left: .5em;
+    }
+
+    .divider:not(:empty)::after {
+      margin-right: .5em;
+    }
+
+    /* صندوق طباعة وعرض نتيجة الرمز المقروء/المدخل */
     .scanned-result-box {
       background: #0f172a;
       border: 1px solid var(--accent);
@@ -218,6 +243,7 @@
 
     .btn-submit { background-color: #2563eb; color: white; }
     .btn-primary { background-color: var(--accent); color: white; }
+    .btn-success { background-color: #16a34a; color: white; }
     .btn-danger { background-color: var(--danger); color: white; }
 
     /* التنبيهات */
@@ -243,7 +269,7 @@
 <body>
 
   <div class="container">
-    <!-- تنبيه HTTPS -->
+    <!-- تنبيه HTTPS في حال فتح الرابط بدون تشفير -->
     <div id="httpsWarning" class="alert alert-warning">
       ⚠️ الكاميرا تتطلب تشغيل الصفحة عبر رابط آمن يبدأ بـ <b>HTTPS</b> (مثل GitHub Pages).
     </div>
@@ -285,26 +311,41 @@
     <!-- رسائل التنبيه والخطأ -->
     <div id="alertBox" class="alert"></div>
 
-    <!-- قسم الكاميرا ومسح الرمز -->
+    <!-- بطاقة خيارات تسجيل الحضور والانصراف (كاميرا + إدخال يدوي) -->
     <div class="card">
+      <h2 style="font-size: 1rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">تسجيل الحضور / الانصراف</h2>
+
+      <!-- الخيار 1: مسح بالكاميرا -->
       <div id="reader-container">
         <div id="reader"></div>
       </div>
       
-      <button id="scanBtn" class="btn-primary" onclick="toggleCamera()" style="margin-top: 10px;" disabled>
+      <button id="scanBtn" class="btn-primary" onclick="toggleCamera()" disabled>
         📷 تشغيل الكاميرا لمسح الرمز
       </button>
 
-      <!-- صندوق طباعة وعرض نتيجة الـ QR الممسوح تحت الكاميرا -->
+      <!-- فاصل بين الطريقتين -->
+      <div class="divider">أو إدخال الرمز يدوياً</div>
+
+      <!-- الخيار 2: إدخال الكود يدويًا -->
+      <div class="form-group" style="margin-bottom: 8px;">
+        <input type="text" id="manualQrInput" placeholder="أدخل أو الصق رابط / كود الـ QR هنا" dir="ltr" style="text-align: left;">
+      </div>
+
+      <button id="manualSubmitBtn" class="btn-success" onclick="handleManualQrSubmit()" disabled>
+        ✍️ تسجيل الحضور عبر الكود المدخل
+      </button>
+
+      <!-- صندوق طباعة وعرض نتيجة الـ QR الممسوح أو المدخل -->
       <div id="scannedResultBox" class="scanned-result-box">
         <div class="scanned-result-title">
-          <span>🔍 الرمز المقروء (QR Data):</span>
+          <span>🔍 الرمز المعتمد (QR Data):</span>
         </div>
         <div id="scannedResultText" class="scanned-result-text">---</div>
       </div>
 
-      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 8px;">
-        (يرجى الضغط على زر حفظ وتأكيد البيانات أولاً لتفعيل الكاميرا)
+      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
+        (يرجى الضغط على زر حفظ وتأكيد البيانات أولاً لتفعيل خيارات التسجيل)
       </div>
     </div>
   </div>
@@ -313,12 +354,14 @@
     // ========================================================
     // 1. رابط الـ Google Apps Script الخاص بك
     // ========================================================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9MqCVzo9Asg9LnmhXx7_F7pdtXpKlGA9cG6LIhYRMXO0HpAbwXHISHzikTYcR_ieV/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwvam9S8j6xs_0jBP6gFM4yzuwthBmUGrPTNu9N9i6fvZgXHVGrbL4ebLtdd0rUIWET/exec";
 
     // العناصر والمتغيرات
     const empNameInput = document.getElementById("empName");
     const empTitleInput = document.getElementById("empTitle");
     const empIdDisplay = document.getElementById("empIdDisplay");
+    const manualQrInput = document.getElementById("manualQrInput");
+    const manualSubmitBtn = document.getElementById("manualSubmitBtn");
     const statusDot = document.getElementById("statusDot");
     const statusText = document.getElementById("statusText");
     const timerDisplay = document.getElementById("timerDisplay");
@@ -351,12 +394,13 @@
         empIdDisplay.innerText = currentEmpId;
         empNameInput.value = savedName;
         empTitleInput.value = savedTitle;
-        unlockScanner();
+        unlockActionButtons();
       }
 
       const lastQr = localStorage.getItem("last_scanned_qr");
       if (lastQr) {
-        displayScannedQr(lastQr);
+        displayProcessedQr(lastQr);
+        manualQrInput.value = lastQr;
       }
 
       restoreWorkState();
@@ -387,16 +431,17 @@
       empIdDisplay.innerText = currentEmpId;
       showAlert(`تم حفظ البيانات وتثبيت الرمز (${currentEmpId}) بنجاح!`, "success");
       
-      unlockScanner();
+      unlockActionButtons();
     }
 
-    function unlockScanner() {
+    function unlockActionButtons() {
       scanBtn.disabled = false;
+      manualSubmitBtn.disabled = false;
       lockWarning.style.display = "none";
     }
 
     // ========================================================
-    // 4. التايمر والمؤشر الضوئي
+    // 4. إدارة التايمر والمؤشر الضوئي
     // ========================================================
     function restoreWorkState() {
       const checkInTime = localStorage.getItem("check_in_time");
@@ -436,13 +481,13 @@
       timerDisplay.innerText = "00:00:00";
     }
 
-    function displayScannedQr(text) {
+    function displayProcessedQr(text) {
       scannedResultText.innerText = text;
       scannedResultBox.style.display = "block";
     }
 
     // ========================================================
-    // 5. تشغيل وإيقاف الكاميرا
+    // 5. مسح الكاميرا
     // ========================================================
     async function toggleCamera() {
       if (isCameraActive) {
@@ -515,22 +560,37 @@
       scanBtn.disabled = false;
     }
 
-    // ========================================================
-    // 6. قراءة الرمز وإرسال الطلب للخادم
-    // ========================================================
     async function onScanSuccess(decodedText) {
       await stopCamera();
+      processAttendanceRequest(decodedText);
+    }
 
-      displayScannedQr(decodedText);
-      localStorage.setItem("last_scanned_qr", decodedText);
+    // ========================================================
+    // 6. الإدخال اليدوي لكود الـ QR
+    // ========================================================
+    function handleManualQrSubmit() {
+      const manualCode = manualQrInput.value.trim();
+      if (!manualCode) {
+        showAlert("يرجى كتابة أو لصق كود الـ QR في الخانة أولاً", "warning");
+        return;
+      }
+      processAttendanceRequest(manualCode);
+    }
 
-      showAlert("تم التقاط الرمز بنجاح! جاري الإرسال للخادم...", "success");
+    // ========================================================
+    // 7. الدالة الموحدة لإرسال الطلب (كاميرا أو يدوي) للخادم
+    // ========================================================
+    async function processAttendanceRequest(qrText) {
+      displayProcessedQr(qrText);
+      localStorage.setItem("last_scanned_qr", qrText);
+
+      showAlert("جاري معالجة الطلب وتسجيل الحركة في الجدول...", "success");
 
       const payload = {
         employeeId: localStorage.getItem("emp_id"),
         employeeName: localStorage.getItem("emp_name"),
         jobTitle: localStorage.getItem("emp_title"),
-        qrData: decodedText,
+        qrData: qrText,
         timestamp: new Date().toISOString()
       };
 
