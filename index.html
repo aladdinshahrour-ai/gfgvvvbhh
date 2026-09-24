@@ -79,63 +79,46 @@
       color: var(--text);
       font-size: 0.95rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
     }
 
     input:focus {
       border-color: var(--accent);
     }
 
-    /* بطاقة الهوية المقفلة (بعد التسجيل) */
-    .profile-locked-card {
+    /* مظهر الحقل عندما يصبح مقفلاً وغير قابل للتعديل */
+    input.locked-input {
+      background-color: #0b1120 !important;
+      border-color: #1e40af !important;
+      color: #93c5fd !important;
+      font-weight: bold;
+      cursor: not-allowed;
+    }
+
+    .meta-box {
       background: #0f172a;
-      border: 1px solid #1e40af;
-      border-radius: 12px;
-      padding: 14px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--accent);
+      margin-bottom: 12px;
+      font-size: 0.8rem;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-    }
-
-    .lock-badge {
-      display: inline-flex;
-      align-items: center;
       gap: 6px;
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      width: fit-content;
-      margin-bottom: 4px;
     }
 
-    .info-row {
+    .meta-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.85rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding-bottom: 6px;
     }
 
-    .info-row:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .info-label {
-      color: var(--text-muted);
-    }
-
-    .info-value {
-      color: var(--text);
-      font-weight: 600;
+    .meta-val {
       font-family: monospace;
+      color: #60a5fa;
+      font-weight: bold;
     }
 
-    /* لوحة التايمر */
     .status-panel {
       text-align: center;
       display: flex;
@@ -276,46 +259,37 @@
 
   <div class="container">
 
-    <!-- بطاقة الهوية (النموذج لأول مرة / ثم يتحول إلى بطاقة مقفلة) -->
+    <!-- بطاقة هوية الموظف الثابتة (بدون وسم form لتجنب أي تحديث للصفحة) -->
     <div class="card" id="identityCard">
-      <!-- نموذج الإدخال لمرة واحدة -->
-      <form id="registrationForm" onsubmit="handleInitialRegistration(event)">
-        <h1>تسجيل هوية الموظف</h1>
-        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">
-          يتم إدخال الاسم لمرة واحدة وتثبيته بشكل دائم على عتاد هذا الهاتف.
-        </p>
+      <h1>بيانات هوية الموظف</h1>
 
-        <div class="form-group">
-          <label for="empNameInput">الاسم الثلاثي للموظف</label>
-          <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل" required autocomplete="off">
+      <div class="meta-box">
+        <div class="meta-item">
+          <span>معرّف الموظف (ID):</span>
+          <span class="meta-val" id="empIdDisplay">لم يتم التوليد بعد</span>
         </div>
-
-        <button type="submit" class="btn-submit" id="registerBtn">
-          🔒 تثبيت الحساب نهائياً على هذا الهاتف
-        </button>
-      </form>
-
-      <!-- العرض الثابت والمقفل بعد التسجيل -->
-      <div id="lockedProfileView" style="display: none;">
-        <div class="lock-badge">🔒 هوية موثقة ومربوطة بالعتاد</div>
-        <div class="profile-locked-card">
-          <div class="info-row">
-            <span class="info-label">اسم الموظف:</span>
-            <span class="info-value" id="displayEmpName">---</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">الرمز المعتمد (ID):</span>
-            <span class="info-value" style="color: #60a5fa;" id="displayEmpId">---</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">بصمة العتاد (GPU/HW):</span>
-            <span class="info-value" style="font-size: 0.75rem;" id="displayDeviceId">---</span>
-          </div>
+        <div class="meta-item">
+          <span>بصمة العتاد (Hardware):</span>
+          <span class="meta-val" id="deviceIdDisplay" style="font-size: 0.75rem;">جاري التحليل...</span>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label for="empNameInput" id="empNameLabel">الاسم الكامل للموظف (يُدخل لمرة واحدة):</label>
+        <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل هنا..." autocomplete="off">
+      </div>
+
+      <!-- زر الحفظ العادي بدون type=submit -->
+      <button type="button" class="btn-submit" id="registerBtn" onclick="handleInitialRegistration()">
+        🔒 تثبيت الحساب نهائياً على هذا الهاتف
+      </button>
+
+      <div id="lockedNotice" style="display: none; font-size: 0.8rem; color: #4ade80; text-align: center; margin-top: 8px;">
+        ✓ تم توثيق وتثبيت هويتك على هذا الجهاز (غير قابلة للتعديل)
       </div>
     </div>
 
-    <!-- لوحة التايمر -->
+    <!-- لوحة التايمر وحالة الدوام -->
     <div class="card status-panel">
       <div class="status-badge">
         <span class="status-dot" id="statusDot"></span>
@@ -326,7 +300,7 @@
 
     <div id="alertBox" class="alert"></div>
 
-    <!-- قسم تسجيل الحضور والانصراف -->
+    <!-- بطاقة مسح الحضور والانصراف -->
     <div class="card">
       <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
         تسجيل الحضور / الانصراف
@@ -356,7 +330,7 @@
       </div>
 
       <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-        (يرجى تثبيت هوية الموظف في الأعلى أولاً لتفعيل أزرار التسجيل)
+        (يرجى تثبيت الاسم في الأعلى أولاً لتفعيل خيارات التسجيل)
       </div>
     </div>
   </div>
@@ -364,13 +338,12 @@
   <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVxkqWNWGxMddnppCU8r51O1N2g9RJTasiL9wlJPdY9fmUa8NKOxRY9IbywVDFt9dc/exec";
 
-    const registrationForm = document.getElementById("registrationForm");
-    const lockedProfileView = document.getElementById("lockedProfileView");
     const empNameInput = document.getElementById("empNameInput");
+    const empNameLabel = document.getElementById("empNameLabel");
     const registerBtn = document.getElementById("registerBtn");
-    const displayEmpName = document.getElementById("displayEmpName");
-    const displayEmpId = document.getElementById("displayEmpId");
-    const displayDeviceId = document.getElementById("displayDeviceId");
+    const lockedNotice = document.getElementById("lockedNotice");
+    const empIdDisplay = document.getElementById("empIdDisplay");
+    const deviceIdDisplay = document.getElementById("deviceIdDisplay");
     const manualQrInput = document.getElementById("manualQrInput");
     const manualSubmitBtn = document.getElementById("manualSubmitBtn");
     const statusDot = document.getElementById("statusDot");
@@ -390,7 +363,7 @@
     let currentEmpName = "";
     let currentDeviceId = "";
 
-    // 1. توليد بصمة العتاد (Canvas & Hardware Fingerprint)
+    // 1. توليد بصمة العتاد عبر محرك الرسوميات (GPU & Screen Hash)
     async function generateHardwareFingerprint() {
       try {
         const canvas = document.createElement('canvas');
@@ -452,40 +425,59 @@
       });
     }
 
-    // 2. فحص حالة التثبيت عند فتح الصفحة
+    // 2. فحص الذاكرة عند بدء التحميل
     window.addEventListener("DOMContentLoaded", async () => {
       currentDeviceId = await generateHardwareFingerprint();
+      deviceIdDisplay.innerText = currentDeviceId;
 
       const savedId = localStorage.getItem("emp_id");
       const savedName = localStorage.getItem("emp_name");
-      const isRegistered = localStorage.getItem("emp_is_registered");
 
-      // إذا كان الموظف مسجلاً من قبل، نقفل الواجهة مباشرة
-      if (savedId && savedName && isRegistered === "true") {
+      // إذا وُجدت بيانات سابقة مقفلة، نسترجعها ونجعل الحقل غير قابل للتعديل
+      if (savedId && savedName) {
         currentEmpId = savedId;
         currentEmpName = savedName;
-        renderLockedProfile(currentEmpName, currentEmpId, currentDeviceId);
+        lockNameFieldPermanently(currentEmpName, currentEmpId);
         unlockActionButtons();
       }
 
       restoreWorkState();
     });
 
-    // 3. التسجيل لأول مرة وإرسال البيانات لصفحة الموظفين (Employees)
-    async function handleInitialRegistration(event) {
-      event.preventDefault();
+    // 3. تثبيت الاسم والـ ID في الصفحة وقفل الحقل
+    function lockNameFieldPermanently(name, id) {
+      empNameInput.value = name;
+      empNameInput.readOnly = true;
+      empNameInput.classList.add("locked-input");
+      empNameLabel.innerHTML = 'اسم الموظف المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+
+      empIdDisplay.innerText = id;
+      registerBtn.style.display = "none"; // إخفاء زر التثبيت لأنه تم بالفعل
+      lockedNotice.style.display = "block";
+    }
+
+    // 4. دالة التثبيت لأول مرة (تمنع مسح الاسم إطلاقاً)
+    async function handleInitialRegistration() {
       const name = empNameInput.value.trim();
 
       if (!name) {
-        showAlert("يرجى إدخال اسمك الكامل", "error");
+        showAlert("يرجى إدخال اسمك الكامل أولاً", "error");
         return;
       }
 
+      // قفل الحقل فورياً في الواجهة لمنع مسحه
+      empNameInput.readOnly = true;
       registerBtn.disabled = true;
       registerBtn.innerText = "⏳ جاري تثبيت الحساب في قاعدة البيانات...";
 
-      // توليد معرّف عشوائي فريد للموظف
+      // توليد معرّف عشوائي فريد
       const newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
+
+      // حفظ فوري في كاش المتصفح حتى لا يضيع إذا انقطع الاتصال
+      localStorage.setItem("emp_name", name);
+      localStorage.setItem("emp_id", newEmpId);
+      currentEmpName = name;
+      currentEmpId = newEmpId;
 
       const payload = {
         action: "REGISTER_EMPLOYEE",
@@ -507,36 +499,24 @@
         const result = JSON.parse(responseText);
 
         if (result.status === "SUCCESS") {
-          // حفظ دائم في كاش المتصفح
-          localStorage.setItem("emp_id", newEmpId);
-          localStorage.setItem("emp_name", name);
-          localStorage.setItem("emp_is_registered", "true");
-
-          currentEmpId = newEmpId;
-          currentEmpName = name;
-
-          renderLockedProfile(currentEmpName, currentEmpId, currentDeviceId);
+          lockNameFieldPermanently(currentEmpName, currentEmpId);
           unlockActionButtons();
-          showAlert("🎉 تم تسجيل وتثبيت هويتك بنجاح في صفحة الموظفين!", "success");
+          showAlert("🎉 تم تثبيت هويتك بنجاح في صفحة الموظفين!", "success");
         } else {
+          // في حال رفض السيرفر (مثلاً الجهاز مسجل لموظف آخر)
           showAlert("❌ " + result.message, "error");
+          localStorage.removeItem("emp_name");
+          localStorage.removeItem("emp_id");
+          empNameInput.readOnly = false;
           registerBtn.disabled = false;
           registerBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
         }
       } catch (err) {
-        showAlert("فشل الاتصال بالخادم: " + err.message, "error");
+        // حتى لو فشل الاتصال، يبقى الاسم محفوظاً في الحقل للمحاولة مجدداً
+        showAlert("فشل إرسال البيانات للخادم: " + err.message, "error");
         registerBtn.disabled = false;
-        registerBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
+        registerBtn.innerText = "🔄 إعادة محاولة التثبيت";
       }
-    }
-
-    // إخفاء النموذج وإظهار البطاقة المقفلة
-    function renderLockedProfile(name, id, deviceId) {
-      registrationForm.style.display = "none";
-      displayEmpName.innerText = name;
-      displayEmpId.innerText = id;
-      displayDeviceId.innerText = deviceId;
-      lockedProfileView.style.display = "block";
     }
 
     function unlockActionButtons() {
@@ -649,13 +629,13 @@
 
     async function processAttendanceRequest(qrText) {
       displayProcessedQr(qrText);
-      showAlert("⏳ جاري التحقق من بصمة العتاد والموقع والشبكة...", "warning");
+      showAlert("⏳ جاري التحقق من الموقع والشبكة وبصمة الهاتف...", "warning");
 
       let coords = null;
       try {
         coords = await getGeoLocation();
       } catch (locErr) {
-        showAlert("فشل الفحص الجغرافي: " + locErr.message, "error");
+        showAlert("فشل فحص الموقع: " + locErr.message, "error");
         return;
       }
 
@@ -663,4 +643,20 @@
 
       const payload = {
         action: "RECORD_ATTENDANCE",
-     
+        employeeId: currentEmpId,
+        employeeName: currentEmpName,
+        deviceFingerprint: currentDeviceId,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        clientIp: clientIp,
+        qrData: qrText,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(p
