@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>نظام الحضور الموثوق</title>
+  <title>نظام الحضور والانصراف الموثوق</title>
   
   <!-- مكتبة قراءة QR Code عبر الكاميرا -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -86,7 +87,6 @@
       border-color: var(--accent);
     }
 
-    /* مظهر الحقل عندما يصبح مقفلاً وغير قابل للتعديل */
     input.locked-input {
       background-color: #0b1120 !important;
       border-color: #1e40af !important;
@@ -229,6 +229,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      transition: opacity 0.2s;
     }
 
     button:disabled {
@@ -259,7 +260,7 @@
 
   <div class="container">
 
-    <!-- بطاقة هوية الموظف الثابتة (بدون وسم form لتجنب أي تحديث للصفحة) -->
+    <!-- بطاقة هوية الموظف والعتاد -->
     <div class="card" id="identityCard">
       <h1>بيانات هوية الموظف</h1>
 
@@ -270,7 +271,7 @@
         </div>
         <div class="meta-item">
           <span>بصمة العتاد (Hardware):</span>
-          <span class="meta-val" id="deviceIdDisplay" style="font-size: 0.75rem;">جاري التحليل...</span>
+          <span class="meta-val" id="deviceIdDisplay" style="font-size: 0.75rem;">جاري القراءة...</span>
         </div>
       </div>
 
@@ -279,13 +280,12 @@
         <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل هنا..." autocomplete="off">
       </div>
 
-      <!-- زر الحفظ العادي بدون type=submit -->
       <button type="button" class="btn-submit" id="registerBtn" onclick="handleInitialRegistration()">
         🔒 تثبيت الحساب نهائياً على هذا الهاتف
       </button>
 
       <div id="lockedNotice" style="display: none; font-size: 0.8rem; color: #4ade80; text-align: center; margin-top: 8px;">
-        ✓ تم توثيق وتثبيت هويتك على هذا الجهاز (غير قابلة للتعديل)
+        ✓ تم توثيق وتثبيت هويتك على هذا الجهاز بنجاح
       </div>
     </div>
 
@@ -300,7 +300,7 @@
 
     <div id="alertBox" class="alert"></div>
 
-    <!-- بطاقة مسح الحضور والانصراف -->
+    <!-- بطاقة تسجيل الحضور والانصراف -->
     <div class="card">
       <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
         تسجيل الحضور / الانصراف
@@ -336,6 +336,7 @@
   </div>
 
   <script>
+    // الرابط المعتمد الجديد
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVxkqWNWGxMddnppCU8r51O1N2g9RJTasiL9wlJPdY9fmUa8NKOxRY9IbywVDFt9dc/exec";
 
     const empNameInput = document.getElementById("empNameInput");
@@ -363,41 +364,39 @@
     let currentEmpName = "";
     let currentDeviceId = "";
 
-    // 1. توليد بصمة العتاد عبر محرك الرسوميات (GPU & Screen Hash)
-    async function generateHardwareFingerprint() {
+    // 1. خوارزمية فورية ومتزامنة للبصمة العتادية (تعمل في أقل من 0.01 ثانية)
+    function generateFastHardwareFingerprint() {
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = 240;
-        canvas.height = 60;
+        canvas.width = 200;
+        canvas.height = 40;
         const ctx = canvas.getContext('2d');
         ctx.textBaseline = "top";
-        ctx.font = "14px 'Arial', sans-serif";
-        ctx.textBaseline = "alphabetic";
+        ctx.font = "14px Arial";
         ctx.fillStyle = "#f60";
-        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillRect(100, 1, 50, 15);
         ctx.fillStyle = "#069";
-        ctx.fillText("AttendanceSecure_🔒_123", 2, 15);
-        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-        ctx.fillText("AttendanceSecure_🔒_123", 4, 17);
+        ctx.fillText("Office_HW_Security", 2, 10);
         const canvasData = canvas.toDataURL();
 
-        const hardwareSpecs = [
+        const str = [
           canvasData,
           screen.width + "x" + screen.height,
           screen.colorDepth,
-          window.devicePixelRatio || 1,
-          navigator.hardwareConcurrency || "cores",
+          navigator.hardwareConcurrency || 4,
           navigator.maxTouchPoints || 0,
           Intl.DateTimeFormat().resolvedOptions().timeZone || ""
-        ].join("###");
+        ].join("-");
 
-        const msgBuffer = new TextEncoder().encode(hardwareSpecs);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return "HW-" + hashHex.substring(0, 16).toUpperCase();
+        // FNV-1a Hashing
+        let hash = 2166136261;
+        for (let i = 0; i < str.length; i++) {
+          hash ^= str.charCodeAt(i);
+          hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return "HW-" + (hash >>> 0).toString(16).toUpperCase();
       } catch (e) {
-        return "HW-" + Math.abs(screen.width * screen.height + (navigator.hardwareConcurrency || 2)).toString(16).toUpperCase();
+        return "HW-" + Math.floor(10000000 + Math.random() * 90000000);
       }
     }
 
@@ -425,15 +424,14 @@
       });
     }
 
-    // 2. فحص الذاكرة عند بدء التحميل
-    window.addEventListener("DOMContentLoaded", async () => {
-      currentDeviceId = await generateHardwareFingerprint();
+    // 2. تشغيل فوري بدون انتظار لتفادي أي بطء في الهواتف
+    function initApp() {
+      currentDeviceId = generateFastHardwareFingerprint();
       deviceIdDisplay.innerText = currentDeviceId;
 
       const savedId = localStorage.getItem("emp_id");
       const savedName = localStorage.getItem("emp_name");
 
-      // إذا وُجدت بيانات سابقة مقفلة، نسترجعها ونجعل الحقل غير قابل للتعديل
       if (savedId && savedName) {
         currentEmpId = savedId;
         currentEmpName = savedName;
@@ -442,9 +440,15 @@
       }
 
       restoreWorkState();
-    });
+    }
 
-    // 3. تثبيت الاسم والـ ID في الصفحة وقفل الحقل
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initApp);
+    } else {
+      initApp();
+    }
+
+    // 3. قفل حقل الاسم نهائياً
     function lockNameFieldPermanently(name, id) {
       empNameInput.value = name;
       empNameInput.readOnly = true;
@@ -452,11 +456,11 @@
       empNameLabel.innerHTML = 'اسم الموظف المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
 
       empIdDisplay.innerText = id;
-      registerBtn.style.display = "none"; // إخفاء زر التثبيت لأنه تم بالفعل
+      registerBtn.style.display = "none";
       lockedNotice.style.display = "block";
     }
 
-    // 4. دالة التثبيت لأول مرة (تمنع مسح الاسم إطلاقاً)
+    // 4. تثبيت الحساب لأول مرة وحفظه في صفحة الموظفين
     async function handleInitialRegistration() {
       const name = empNameInput.value.trim();
 
@@ -465,15 +469,13 @@
         return;
       }
 
-      // قفل الحقل فورياً في الواجهة لمنع مسحه
       empNameInput.readOnly = true;
       registerBtn.disabled = true;
       registerBtn.innerText = "⏳ جاري تثبيت الحساب في قاعدة البيانات...";
 
-      // توليد معرّف عشوائي فريد
       const newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
 
-      // حفظ فوري في كاش المتصفح حتى لا يضيع إذا انقطع الاتصال
+      // حفظ فوري في الكاش
       localStorage.setItem("emp_name", name);
       localStorage.setItem("emp_id", newEmpId);
       currentEmpName = name;
@@ -503,7 +505,6 @@
           unlockActionButtons();
           showAlert("🎉 تم تثبيت هويتك بنجاح في صفحة الموظفين!", "success");
         } else {
-          // في حال رفض السيرفر (مثلاً الجهاز مسجل لموظف آخر)
           showAlert("❌ " + result.message, "error");
           localStorage.removeItem("emp_name");
           localStorage.removeItem("emp_id");
@@ -512,7 +513,6 @@
           registerBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
         }
       } catch (err) {
-        // حتى لو فشل الاتصال، يبقى الاسم محفوظاً في الحقل للمحاولة مجدداً
         showAlert("فشل إرسال البيانات للخادم: " + err.message, "error");
         registerBtn.disabled = false;
         registerBtn.innerText = "🔄 إعادة محاولة التثبيت";
@@ -659,4 +659,36 @@
           mode: "cors",
           redirect: "follow",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(p
+          body: JSON.stringify(payload)
+        });
+
+        const responseText = await response.text();
+        const result = JSON.parse(responseText);
+
+        if (result.status === "SUCCESS") {
+          if (result.action === "CHECK_IN") {
+            const now = Date.now();
+            localStorage.setItem("check_in_time", now.toString());
+            setWorkActive(now);
+            showAlert(`تم تسجيل الدخول بنجاح! مرحباً ${currentEmpName}`, "success");
+          } else if (result.action === "CHECK_OUT") {
+            localStorage.removeItem("check_in_time");
+            setWorkInactive();
+            showAlert(`تم تسجيل الانصراف! ساعات العمل: ${result.totalHours} ساعة.`, "success");
+          }
+        } else {
+          showAlert("❌ " + result.message, "error");
+        }
+      } catch (error) {
+        showAlert("فشل الاتصال بالخادم: " + error.message, "error");
+      }
+    }
+
+    function showAlert(msg, type) {
+      alertBox.innerText = msg;
+      alertBox.className = `alert alert-${type}`;
+      alertBox.style.display = "block";
+    }
+  </script>
+</body>
+</html>
