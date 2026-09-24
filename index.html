@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>نظام الحضور والانصراف الذكي</title>
   
-  <!-- مكتبة قراءة QR Code -->
+  <!-- مكتبة قراءة QR Code عبر الكاميرا -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
@@ -17,6 +17,7 @@
       --accent: #3b82f6;
       --success: #22c55e;
       --danger: #ef4444;
+      --warning: #f59e0b;
       --border: #334155;
     }
 
@@ -148,7 +149,7 @@
     /* شاشة الكاميرا */
     #reader-container {
       width: 100%;
-      min-height: 260px;
+      min-height: 250px;
       background: #000;
       border-radius: 12px;
       overflow: hidden;
@@ -158,6 +159,37 @@
 
     #reader {
       width: 100% !important;
+    }
+
+    /* صندوق طباعة وعرض نتيجة الـ QR الممسوح */
+    .scanned-result-box {
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .scanned-result-title {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: bold;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scanned-result-text {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      word-break: break-all;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 8px;
+      border-radius: 6px;
     }
 
     button {
@@ -201,21 +233,26 @@
     .alert-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
     .alert-error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
     .alert-warning { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid #eab308; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <!-- تنبيه خاص بـ HTTPS إذا كان الرابط غير آمن -->
+    <!-- تنبيه HTTPS -->
     <div id="httpsWarning" class="alert alert-warning">
       ⚠️ الكاميرا تتطلب تشغيل الصفحة عبر رابط آمن يبدأ بـ <b>HTTPS</b> (مثل GitHub Pages).
     </div>
 
-    <!-- نموذج تسجيل بيانات الموظف مع زر Submit -->
+    <!-- نموذج بيانات الموظف مع زر الحفظ -->
     <form id="employeeForm" class="card" onsubmit="handleFormSubmit(event)">
       <h1>بيانات الموظف</h1>
       
-      <!-- إظهار رقم الـ ID المنشأ والمحفوظ -->
+      <!-- إظهار الرمز المولد للموظف -->
       <div class="id-badge-container">
         <span style="font-size: 0.85rem; color: var(--text-muted);">الرمز المولد (ID):</span>
         <span class="id-badge" id="empIdDisplay">لم يتم التوليد بعد</span>
@@ -248,15 +285,25 @@
     <!-- رسائل التنبيه والخطأ -->
     <div id="alertBox" class="alert"></div>
 
-    <!-- قسم الكاميرا والمسح -->
+    <!-- قسم الكاميرا ومسح الرمز -->
     <div class="card">
       <div id="reader-container">
         <div id="reader"></div>
       </div>
+      
       <button id="scanBtn" class="btn-primary" onclick="toggleCamera()" style="margin-top: 10px;" disabled>
         📷 تشغيل الكاميرا لمسح الرمز
       </button>
-      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 6px;">
+
+      <!-- صندوق طباعة وعرض نتيجة الـ QR الممسوح تحت الكاميرا -->
+      <div id="scannedResultBox" class="scanned-result-box">
+        <div class="scanned-result-title">
+          <span>🔍 الرمز المقروء (QR Data):</span>
+        </div>
+        <div id="scannedResultText" class="scanned-result-text">---</div>
+      </div>
+
+      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 8px;">
         (يرجى الضغط على زر حفظ وتأكيد البيانات أولاً لتفعيل الكاميرا)
       </div>
     </div>
@@ -264,15 +311,14 @@
 
   <script>
     // ========================================================
-    // 1. رابط الـ Google Apps Script
+    // 1. رابط الـ Google Apps Script الخاص بك
     // ========================================================
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9MqCVzo9Asg9LnmhXx7_F7pdtXpKlGA9cG6LIhYRMXO0HpAbwXHISHzikTYcR_ieV/exec";
 
-    // المتغيرات وعناصر الواجهة
+    // العناصر والمتغيرات
     const empNameInput = document.getElementById("empName");
     const empTitleInput = document.getElementById("empTitle");
     const empIdDisplay = document.getElementById("empIdDisplay");
-    const submitBtn = document.getElementById("submitBtn");
     const statusDot = document.getElementById("statusDot");
     const statusText = document.getElementById("statusText");
     const timerDisplay = document.getElementById("timerDisplay");
@@ -280,6 +326,8 @@
     const scanBtn = document.getElementById("scanBtn");
     const lockWarning = document.getElementById("lockWarning");
     const readerContainer = document.getElementById("reader-container");
+    const scannedResultBox = document.getElementById("scannedResultBox");
+    const scannedResultText = document.getElementById("scannedResultText");
 
     let timerInterval = null;
     let html5QrCode = null;
@@ -287,10 +335,9 @@
     let currentEmpId = "";
 
     // ========================================================
-    // 2. تحميل البيانات المحفوظة مسبقاً من كاش المتصفح (localStorage)
+    // 2. استرجاع البيانات المحفوظة من الكاش (localStorage)
     // ========================================================
     window.addEventListener("DOMContentLoaded", () => {
-      // التحقق من تشغيل الصفحة عبر HTTPS
       if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         document.getElementById("httpsWarning").style.display = "block";
       }
@@ -299,7 +346,6 @@
       const savedName = localStorage.getItem("emp_name");
       const savedTitle = localStorage.getItem("emp_title");
 
-      // إذا كانت البيانات مسجلة مسبقاً في الكاش، نقوم بتعبئتها وتفعيل زر الكاميرا فوراً
       if (savedId && savedName && savedTitle) {
         currentEmpId = savedId;
         empIdDisplay.innerText = currentEmpId;
@@ -308,12 +354,16 @@
         unlockScanner();
       }
 
-      // استعادة حالة الدوام والتايمر
+      const lastQr = localStorage.getItem("last_scanned_qr");
+      if (lastQr) {
+        displayScannedQr(lastQr);
+      }
+
       restoreWorkState();
     });
 
     // ========================================================
-    // 3. معالجة زر Submit وحفظ البيانات والرمز في الكاش
+    // 3. حفظ بيانات الموظف والرمز المولد في الكاش
     // ========================================================
     function handleFormSubmit(event) {
       event.preventDefault();
@@ -326,17 +376,14 @@
         return;
       }
 
-      // توليد ID جديد إذا لم يكن موجوداً من قبل في الكاش
       if (!currentEmpId) {
         currentEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
       }
 
-      // حفظ البيانات والرمز المولد في localStorage (كاش المتصفح)
       localStorage.setItem("emp_id", currentEmpId);
       localStorage.setItem("emp_name", name);
       localStorage.setItem("emp_title", title);
 
-      // تحديث الواجهة
       empIdDisplay.innerText = currentEmpId;
       showAlert(`تم حفظ البيانات وتثبيت الرمز (${currentEmpId}) بنجاح!`, "success");
       
@@ -387,6 +434,11 @@
       statusText.innerText = "خارج الدوام";
       if (timerInterval) clearInterval(timerInterval);
       timerDisplay.innerText = "00:00:00";
+    }
+
+    function displayScannedQr(text) {
+      scannedResultText.innerText = text;
+      scannedResultBox.style.display = "block";
     }
 
     // ========================================================
@@ -442,7 +494,7 @@
 
       } catch (err) {
         console.error("Camera Error:", err);
-        showAlert("خطأ في الكاميرا: " + (err.message || err.name || "تأكد من إذن الكاميرا وعمل HTTPS"), "error");
+        showAlert("خطأ في الكاميرا: " + (err.message || "تأكد من إذن الكاميرا وعمل HTTPS"), "error");
         await stopCamera();
       }
     }
@@ -464,13 +516,16 @@
     }
 
     // ========================================================
-    // 6. إرسال البيانات الكاملة عبر JSON إلى Google Sheets
+    // 6. قراءة الرمز وإرسال الطلب للخادم
     // ========================================================
     async function onScanSuccess(decodedText) {
       await stopCamera();
-      showAlert("تم قراءة الرمز! جاري التحقق وتسجيل البيانات...", "success");
 
-      // إعداد كائن JSON متكامل للإرسال
+      displayScannedQr(decodedText);
+      localStorage.setItem("last_scanned_qr", decodedText);
+
+      showAlert("تم التقاط الرمز بنجاح! جاري الإرسال للخادم...", "success");
+
       const payload = {
         employeeId: localStorage.getItem("emp_id"),
         employeeName: localStorage.getItem("emp_name"),
@@ -482,11 +537,21 @@
       try {
         const response = await fetch(SCRIPT_URL, {
           method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          mode: "cors",
+          redirect: "follow",
+          headers: { 
+            "Content-Type": "text/plain;charset=utf-8" 
+          },
           body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const responseText = await response.text();
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch(e) {
+          throw new Error("رد غير متوقع من الخادم: " + responseText.substring(0, 80));
+        }
 
         if (result.status === "SUCCESS") {
           if (result.action === "CHECK_IN") {
@@ -500,11 +565,11 @@
             showAlert(`تم تسجيل الانصراف. ساعات العمل اليوم: ${result.totalHours || "0"} ساعة.`, "success");
           }
         } else {
-          showAlert(result.message || "حدث خطأ من الخادم أثناء المعالجة", "error");
+          showAlert(result.message || "حدث خطأ أثناء معالجة الطلب في الخادم", "error");
         }
       } catch (error) {
-        console.error(error);
-        showAlert("فشل إرسال البيانات إلى الخادم. تأكد من صحة الرابط والاتصال بالإنترنت.", "error");
+        console.error("Fetch Error:", error);
+        showAlert("فشل الاتصال: " + (error.message || "تحقق من اتصالك بالإنترنت"), "error");
       }
     }
 
