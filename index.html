@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>نظام الحضور والانصراف الذكي</title>
+  <title>نظام الحضور الموثوق</title>
   
   <!-- مكتبة قراءة QR Code عبر الكاميرا -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -54,7 +54,7 @@
     }
 
     h1 {
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       text-align: center;
       margin-bottom: 12px;
     }
@@ -86,27 +86,56 @@
       border-color: var(--accent);
     }
 
-    /* عرض ID الموظف */
-    .id-badge-container {
+    /* بطاقة الهوية المقفلة (بعد التسجيل) */
+    .profile-locked-card {
+      background: #0f172a;
+      border: 1px solid #1e40af;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      width: fit-content;
+      margin-bottom: 4px;
+    }
+
+    .info-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #0f172a;
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1px dashed var(--accent);
-      margin-bottom: 12px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 6px;
     }
 
-    .id-badge {
-      font-weight: 700;
-      color: #60a5fa;
-      letter-spacing: 1px;
+    .info-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-value {
+      color: var(--text);
+      font-weight: 600;
       font-family: monospace;
-      font-size: 1rem;
     }
 
-    /* لوحة الحالة والتايمر */
+    /* لوحة التايمر */
     .status-panel {
       text-align: center;
       display: flex;
@@ -146,7 +175,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* شاشة الكاميرا */
     #reader-container {
       width: 100%;
       min-height: 250px;
@@ -161,12 +189,11 @@
       width: 100% !important;
     }
 
-    /* خط فاصل أنيق */
     .divider {
       display: flex;
       align-items: center;
       text-align: center;
-      margin: 16px 0;
+      margin: 14px 0;
       color: var(--text-muted);
       font-size: 0.8rem;
     }
@@ -178,23 +205,16 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .divider:not(:empty)::before {
-      margin-left: .5em;
-    }
+    .divider:not(:empty)::before { margin-left: .5em; }
+    .divider:not(:empty)::after { margin-right: .5em; }
 
-    .divider:not(:empty)::after {
-      margin-right: .5em;
-    }
-
-    /* صندوق طباعة وعرض نتيجة الرمز المقروء/المدخل */
     .scanned-result-box {
       background: #0f172a;
       border: 1px solid var(--accent);
       border-radius: 10px;
-      padding: 12px;
+      padding: 10px;
       margin-top: 10px;
       display: none;
-      animation: fadeIn 0.3s ease;
     }
 
     .scanned-result-title {
@@ -202,18 +222,15 @@
       color: var(--accent);
       font-weight: bold;
       margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .scanned-result-text {
       font-family: monospace;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #e2e8f0;
       word-break: break-all;
       background: rgba(255, 255, 255, 0.05);
-      padding: 8px;
+      padding: 6px;
       border-radius: 6px;
     }
 
@@ -229,11 +246,6 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-
-    button:active {
-      transform: scale(0.98);
     }
 
     button:disabled {
@@ -246,7 +258,6 @@
     .btn-success { background-color: #16a34a; color: white; }
     .btn-danger { background-color: var(--danger); color: white; }
 
-    /* التنبيهات */
     .alert {
       padding: 12px;
       border-radius: 8px;
@@ -259,47 +270,52 @@
     .alert-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
     .alert-error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
     .alert-warning { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid #eab308; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <!-- تنبيه HTTPS في حال فتح الرابط بدون تشفير -->
-    <div id="httpsWarning" class="alert alert-warning">
-      ⚠️ الكاميرا تتطلب تشغيل الصفحة عبر رابط آمن يبدأ بـ <b>HTTPS</b> (مثل GitHub Pages).
+
+    <!-- بطاقة الهوية (النموذج لأول مرة / ثم يتحول إلى بطاقة مقفلة) -->
+    <div class="card" id="identityCard">
+      <!-- نموذج الإدخال لمرة واحدة -->
+      <form id="registrationForm" onsubmit="handleInitialRegistration(event)">
+        <h1>تسجيل هوية الموظف</h1>
+        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">
+          يتم إدخال الاسم لمرة واحدة وتثبيته بشكل دائم على عتاد هذا الهاتف.
+        </p>
+
+        <div class="form-group">
+          <label for="empNameInput">الاسم الثلاثي للموظف</label>
+          <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل" required autocomplete="off">
+        </div>
+
+        <button type="submit" class="btn-submit" id="registerBtn">
+          🔒 تثبيت الحساب نهائياً على هذا الهاتف
+        </button>
+      </form>
+
+      <!-- العرض الثابت والمقفل بعد التسجيل -->
+      <div id="lockedProfileView" style="display: none;">
+        <div class="lock-badge">🔒 هوية موثقة ومربوطة بالعتاد</div>
+        <div class="profile-locked-card">
+          <div class="info-row">
+            <span class="info-label">اسم الموظف:</span>
+            <span class="info-value" id="displayEmpName">---</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الرمز المعتمد (ID):</span>
+            <span class="info-value" style="color: #60a5fa;" id="displayEmpId">---</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">بصمة العتاد (GPU/HW):</span>
+            <span class="info-value" style="font-size: 0.75rem;" id="displayDeviceId">---</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- نموذج بيانات الموظف مع زر الحفظ -->
-    <form id="employeeForm" class="card" onsubmit="handleFormSubmit(event)">
-      <h1>بيانات الموظف</h1>
-      
-      <!-- إظهار الرمز المولد للموظف -->
-      <div class="id-badge-container">
-        <span style="font-size: 0.85rem; color: var(--text-muted);">الرمز المولد (ID):</span>
-        <span class="id-badge" id="empIdDisplay">لم يتم التوليد بعد</span>
-      </div>
-
-      <div class="form-group">
-        <label for="empName">اسم الموظف</label>
-        <input type="text" id="empName" placeholder="أدخل اسمك الكامل" required>
-      </div>
-
-      <div class="form-group">
-        <label for="empTitle">المسمى الوظيفي</label>
-        <input type="text" id="empTitle" placeholder="مثال: مهندس برمجيات / محاسب" required>
-      </div>
-
-      <button type="submit" class="btn-submit" id="submitBtn">
-        💾 حفظ وتأكيد البيانات (Submit)
-      </button>
-    </form>
-
-    <!-- لوحة التايمر ومؤشر الدخول -->
+    <!-- لوحة التايمر -->
     <div class="card status-panel">
       <div class="status-badge">
         <span class="status-dot" id="statusDot"></span>
@@ -308,14 +324,14 @@
       <div class="timer-display" id="timerDisplay">00:00:00</div>
     </div>
 
-    <!-- رسائل التنبيه والخطأ -->
     <div id="alertBox" class="alert"></div>
 
-    <!-- بطاقة خيارات تسجيل الحضور والانصراف (كاميرا + إدخال يدوي) -->
+    <!-- قسم تسجيل الحضور والانصراف -->
     <div class="card">
-      <h2 style="font-size: 1rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">تسجيل الحضور / الانصراف</h2>
+      <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
+        تسجيل الحضور / الانصراف
+      </h2>
 
-      <!-- الخيار 1: مسح بالكاميرا -->
       <div id="reader-container">
         <div id="reader"></div>
       </div>
@@ -324,42 +340,37 @@
         📷 تشغيل الكاميرا لمسح الرمز
       </button>
 
-      <!-- فاصل بين الطريقتين -->
       <div class="divider">أو إدخال الرمز يدوياً</div>
 
-      <!-- الخيار 2: إدخال الكود يدويًا -->
       <div class="form-group" style="margin-bottom: 8px;">
-        <input type="text" id="manualQrInput" placeholder="أدخل أو الصق رابط / كود الـ QR هنا" dir="ltr" style="text-align: left;">
+        <input type="text" id="manualQrInput" placeholder="أدخل كود الـ QR المعتمد" dir="ltr" style="text-align: left;">
       </div>
 
       <button id="manualSubmitBtn" class="btn-success" onclick="handleManualQrSubmit()" disabled>
-        ✍️ تسجيل الحضور عبر الكود المدخل
+        ✍️ تأكيد الحضور بالكود
       </button>
 
-      <!-- صندوق طباعة وعرض نتيجة الـ QR الممسوح أو المدخل -->
       <div id="scannedResultBox" class="scanned-result-box">
-        <div class="scanned-result-title">
-          <span>🔍 الرمز المعتمد (QR Data):</span>
-        </div>
+        <div class="scanned-result-title">🔍 الرمز المعتمد:</div>
         <div id="scannedResultText" class="scanned-result-text">---</div>
       </div>
 
       <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-        (يرجى الضغط على زر حفظ وتأكيد البيانات أولاً لتفعيل خيارات التسجيل)
+        (يرجى تثبيت هوية الموظف في الأعلى أولاً لتفعيل أزرار التسجيل)
       </div>
     </div>
   </div>
 
   <script>
-    // ========================================================
-    // 1. رابط الـ Google Apps Script الخاص بك
-    // ========================================================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywRrOUJbjViaOW-rFoCgMqt6KQuOur7XOoeAB3T5NnUCVE61kXhd1J3_QYcpNqVH9N/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9MqCVzo9Asg9LnmhXx7_F7pdtXpKlGA9cG6LIhYRMXO0HpAbwXHISHzikTYcR_ieV/exec";
 
-    // العناصر والمتغيرات
-    const empNameInput = document.getElementById("empName");
-    const empTitleInput = document.getElementById("empTitle");
-    const empIdDisplay = document.getElementById("empIdDisplay");
+    const registrationForm = document.getElementById("registrationForm");
+    const lockedProfileView = document.getElementById("lockedProfileView");
+    const empNameInput = document.getElementById("empNameInput");
+    const registerBtn = document.getElementById("registerBtn");
+    const displayEmpName = document.getElementById("displayEmpName");
+    const displayEmpId = document.getElementById("displayEmpId");
+    const displayDeviceId = document.getElementById("displayDeviceId");
     const manualQrInput = document.getElementById("manualQrInput");
     const manualSubmitBtn = document.getElementById("manualSubmitBtn");
     const statusDot = document.getElementById("statusDot");
@@ -376,62 +387,156 @@
     let html5QrCode = null;
     let isCameraActive = false;
     let currentEmpId = "";
+    let currentEmpName = "";
+    let currentDeviceId = "";
 
-    // ========================================================
-    // 2. استرجاع البيانات المحفوظة من الكاش (localStorage)
-    // ========================================================
-    window.addEventListener("DOMContentLoaded", () => {
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        document.getElementById("httpsWarning").style.display = "block";
+    // 1. توليد بصمة العتاد (Canvas & Hardware Fingerprint)
+    async function generateHardwareFingerprint() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 240;
+        canvas.height = 60;
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = "top";
+        ctx.font = "14px 'Arial', sans-serif";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = "#069";
+        ctx.fillText("AttendanceSecure_🔒_123", 2, 15);
+        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+        ctx.fillText("AttendanceSecure_🔒_123", 4, 17);
+        const canvasData = canvas.toDataURL();
+
+        const hardwareSpecs = [
+          canvasData,
+          screen.width + "x" + screen.height,
+          screen.colorDepth,
+          window.devicePixelRatio || 1,
+          navigator.hardwareConcurrency || "cores",
+          navigator.maxTouchPoints || 0,
+          Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+        ].join("###");
+
+        const msgBuffer = new TextEncoder().encode(hardwareSpecs);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return "HW-" + hashHex.substring(0, 16).toUpperCase();
+      } catch (e) {
+        return "HW-" + Math.abs(screen.width * screen.height + (navigator.hardwareConcurrency || 2)).toString(16).toUpperCase();
       }
+    }
+
+    async function fetchPublicIp() {
+      try {
+        const response = await fetch("https://api.ipify.org?format=json");
+        const json = await response.json();
+        return json.ip;
+      } catch (e) {
+        return "UNKNOWN_IP";
+      }
+    }
+
+    function getGeoLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("المتصفح لا يدعم تحديد الموقع الجغرافي GPS"));
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            err => reject(new Error("يرجى تفعيل الـ GPS والسماح بالوصول للموقع")),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+        }
+      });
+    }
+
+    // 2. فحص حالة التثبيت عند فتح الصفحة
+    window.addEventListener("DOMContentLoaded", async () => {
+      currentDeviceId = await generateHardwareFingerprint();
 
       const savedId = localStorage.getItem("emp_id");
       const savedName = localStorage.getItem("emp_name");
-      const savedTitle = localStorage.getItem("emp_title");
+      const isRegistered = localStorage.getItem("emp_is_registered");
 
-      if (savedId && savedName && savedTitle) {
+      // إذا كان الموظف مسجلاً من قبل، نقفل الواجهة مباشرة
+      if (savedId && savedName && isRegistered === "true") {
         currentEmpId = savedId;
-        empIdDisplay.innerText = currentEmpId;
-        empNameInput.value = savedName;
-        empTitleInput.value = savedTitle;
+        currentEmpName = savedName;
+        renderLockedProfile(currentEmpName, currentEmpId, currentDeviceId);
         unlockActionButtons();
-      }
-
-      const lastQr = localStorage.getItem("last_scanned_qr");
-      if (lastQr) {
-        displayProcessedQr(lastQr);
-        manualQrInput.value = lastQr;
       }
 
       restoreWorkState();
     });
 
-    // ========================================================
-    // 3. حفظ بيانات الموظف والرمز المولد في الكاش
-    // ========================================================
-    function handleFormSubmit(event) {
+    // 3. التسجيل لأول مرة وإرسال البيانات لصفحة الموظفين (Employees)
+    async function handleInitialRegistration(event) {
       event.preventDefault();
-
       const name = empNameInput.value.trim();
-      const title = empTitleInput.value.trim();
 
-      if (!name || !title) {
-        showAlert("يرجى ملء كافة الحقول بشكل صحيح", "error");
+      if (!name) {
+        showAlert("يرجى إدخال اسمك الكامل", "error");
         return;
       }
 
-      if (!currentEmpId) {
-        currentEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
+      registerBtn.disabled = true;
+      registerBtn.innerText = "⏳ جاري تثبيت الحساب في قاعدة البيانات...";
+
+      // توليد معرّف عشوائي فريد للموظف
+      const newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
+
+      const payload = {
+        action: "REGISTER_EMPLOYEE",
+        employeeId: newEmpId,
+        employeeName: name,
+        deviceFingerprint: currentDeviceId
+      };
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        const responseText = await response.text();
+        const result = JSON.parse(responseText);
+
+        if (result.status === "SUCCESS") {
+          // حفظ دائم في كاش المتصفح
+          localStorage.setItem("emp_id", newEmpId);
+          localStorage.setItem("emp_name", name);
+          localStorage.setItem("emp_is_registered", "true");
+
+          currentEmpId = newEmpId;
+          currentEmpName = name;
+
+          renderLockedProfile(currentEmpName, currentEmpId, currentDeviceId);
+          unlockActionButtons();
+          showAlert("🎉 تم تسجيل وتثبيت هويتك بنجاح في صفحة الموظفين!", "success");
+        } else {
+          showAlert("❌ " + result.message, "error");
+          registerBtn.disabled = false;
+          registerBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
+        }
+      } catch (err) {
+        showAlert("فشل الاتصال بالخادم: " + err.message, "error");
+        registerBtn.disabled = false;
+        registerBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
       }
+    }
 
-      localStorage.setItem("emp_id", currentEmpId);
-      localStorage.setItem("emp_name", name);
-      localStorage.setItem("emp_title", title);
-
-      empIdDisplay.innerText = currentEmpId;
-      showAlert(`تم حفظ البيانات وتثبيت الرمز (${currentEmpId}) بنجاح!`, "success");
-      
-      unlockActionButtons();
+    // إخفاء النموذج وإظهار البطاقة المقفلة
+    function renderLockedProfile(name, id, deviceId) {
+      registrationForm.style.display = "none";
+      displayEmpName.innerText = name;
+      displayEmpId.innerText = id;
+      displayDeviceId.innerText = deviceId;
+      lockedProfileView.style.display = "block";
     }
 
     function unlockActionButtons() {
@@ -440,9 +545,6 @@
       lockWarning.style.display = "none";
     }
 
-    // ========================================================
-    // 4. إدارة التايمر والمؤشر الضوئي
-    // ========================================================
     function restoreWorkState() {
       const checkInTime = localStorage.getItem("check_in_time");
       if (checkInTime) {
@@ -454,8 +556,7 @@
 
     function setWorkActive(startTime) {
       statusDot.classList.add("active");
-      statusText.innerText = "داخل الدوام (جاري الاحتساب)";
-
+      statusText.innerText = "داخل الدوام";
       if (timerInterval) clearInterval(timerInterval);
 
       const updateTimer = () => {
@@ -463,7 +564,6 @@
         const hours = Math.floor(diff / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-
         timerDisplay.innerText = 
           String(hours).padStart(2, '0') + ":" +
           String(minutes).padStart(2, '0') + ":" +
@@ -486,48 +586,25 @@
       scannedResultBox.style.display = "block";
     }
 
-    // ========================================================
-    // 5. مسح الكاميرا
-    // ========================================================
     async function toggleCamera() {
       if (isCameraActive) {
         await stopCamera();
         return;
       }
 
-      if (!currentEmpId) {
-        showAlert("يرجى الضغط على زر حفظ وتأكيد البيانات أولاً", "error");
-        return;
-      }
-
       readerContainer.style.display = "block";
-      scanBtn.innerText = "⏳ جاري تشغيل الكاميرا...";
+      scanBtn.innerText = "⏳ تشغيل الكاميرا...";
       scanBtn.disabled = true;
 
       try {
         html5QrCode = new Html5Qrcode("reader");
-
         const devices = await Html5Qrcode.getCameras();
-        let selectedCameraId = null;
-
-        if (devices && devices.length > 0) {
-          const backCam = devices.find(d => 
-            d.label.toLowerCase().includes("back") || 
-            d.label.toLowerCase().includes("rear") || 
-            d.label.toLowerCase().includes("environment")
-          );
-          selectedCameraId = backCam ? backCam.id : devices[devices.length - 1].id;
-        }
-
-        const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: "environment" };
+        let selectedId = devices && devices.length > 0 ? devices[devices.length - 1].id : null;
+        const config = selectedId ? selectedId : { facingMode: "environment" };
 
         await html5QrCode.start(
-          cameraConfig,
-          {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1.0
-          },
+          config,
+          { fps: 10, qrbox: { width: 220, height: 220 } },
           onScanSuccess,
           () => {}
         );
@@ -536,10 +613,8 @@
         scanBtn.innerText = "🛑 إيقاف الكاميرا";
         scanBtn.className = "btn-danger";
         scanBtn.disabled = false;
-
       } catch (err) {
-        console.error("Camera Error:", err);
-        showAlert("خطأ في الكاميرا: " + (err.message || "تأكد من إذن الكاميرا وعمل HTTPS"), "error");
+        showAlert("خطأ الكاميرا: " + err.message, "error");
         await stopCamera();
       }
     }
@@ -549,9 +624,7 @@
         try {
           await html5QrCode.stop();
           html5QrCode.clear();
-        } catch (e) {
-          console.warn("Cleanup error:", e);
-        }
+        } catch (e) {}
       }
       isCameraActive = false;
       readerContainer.style.display = "none";
@@ -565,82 +638,29 @@
       processAttendanceRequest(decodedText);
     }
 
-    // ========================================================
-    // 6. الإدخال اليدوي لكود الـ QR
-    // ========================================================
     function handleManualQrSubmit() {
-      const manualCode = manualQrInput.value.trim();
-      if (!manualCode) {
-        showAlert("يرجى كتابة أو لصق كود الـ QR في الخانة أولاً", "warning");
+      const code = manualQrInput.value.trim();
+      if (!code) {
+        showAlert("يرجى إدخال كود الـ QR", "warning");
         return;
       }
-      processAttendanceRequest(manualCode);
+      processAttendanceRequest(code);
     }
 
-    // ========================================================
-    // 7. الدالة الموحدة لإرسال الطلب (كاميرا أو يدوي) للخادم
-    // ========================================================
     async function processAttendanceRequest(qrText) {
       displayProcessedQr(qrText);
-      localStorage.setItem("last_scanned_qr", qrText);
+      showAlert("⏳ جاري التحقق من بصمة العتاد والموقع والشبكة...", "warning");
 
-      showAlert("جاري معالجة الطلب وتسجيل الحركة في الجدول...", "success");
+      let coords = null;
+      try {
+        coords = await getGeoLocation();
+      } catch (locErr) {
+        showAlert("فشل الفحص الجغرافي: " + locErr.message, "error");
+        return;
+      }
+
+      const clientIp = await fetchPublicIp();
 
       const payload = {
-        employeeId: localStorage.getItem("emp_id"),
-        employeeName: localStorage.getItem("emp_name"),
-        jobTitle: localStorage.getItem("emp_title"),
-        qrData: qrText,
-        timestamp: new Date().toISOString()
-      };
-
-      try {
-        const response = await fetch(SCRIPT_URL, {
-          method: "POST",
-          mode: "cors",
-          redirect: "follow",
-          headers: { 
-            "Content-Type": "text/plain;charset=utf-8" 
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const responseText = await response.text();
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch(e) {
-          throw new Error("رد غير متوقع من الخادم: " + responseText.substring(0, 80));
-        }
-
-        if (result.status === "SUCCESS") {
-          if (result.action === "CHECK_IN") {
-            const now = Date.now();
-            localStorage.setItem("check_in_time", now.toString());
-            setWorkActive(now);
-            showAlert(`تم تسجيل الدخول بنجاح! مرحباً ${payload.employeeName}`, "success");
-          } else if (result.action === "CHECK_OUT") {
-            localStorage.removeItem("check_in_time");
-            setWorkInactive();
-            showAlert(`تم تسجيل الانصراف. ساعات العمل اليوم: ${result.totalHours || "0"} ساعة.`, "success");
-          }
-        } else {
-          showAlert(result.message || "حدث خطأ أثناء معالجة الطلب في الخادم", "error");
-        }
-      } catch (error) {
-        console.error("Fetch Error:", error);
-        showAlert("فشل الاتصال: " + (error.message || "تحقق من اتصالك بالإنترنت"), "error");
-      }
-    }
-
-    function showAlert(msg, type) {
-      alertBox.innerText = msg;
-      alertBox.className = `alert alert-${type}`;
-      alertBox.style.display = "block";
-      setTimeout(() => {
-        alertBox.style.display = "none";
-      }, 7000);
-    }
-  </script>
-</body>
-</html>
+        action: "RECORD_ATTENDANCE",
+     
