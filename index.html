@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   
-  <!-- إعدادات PWA -->
+  <!-- إعدادات PWA (Progressive Web App) -->
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -46,7 +46,7 @@
     .scanned-result-box { background: #0f172a; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; margin-top: 10px; display: none; }
     .scanned-result-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; margin-bottom: 4px; }
     .scanned-result-text { font-family: monospace; font-size: 0.8rem; color: #e2e8f0; word-break: break-all; background: rgba(255, 255, 255, 0.05); padding: 6px; border-radius: 6px; }
-    button { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    button { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-submit { background-color: #2563eb; color: white; }
     .btn-primary { background-color: var(--accent); color: white; }
@@ -125,26 +125,16 @@
   <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
-      if (b) {
-        b.style.display = "block"; b.className = "alert alert-error";
-        b.innerText = "خطأ النظام (" + line + "): " + msg;
-      }
+      if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ النظام: " + msg; }
       return false;
     };
 
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiaEhwWIsSvSiY_JibIIqS2qQNWhCLDlsx42ZQ--TnA0WWbXI4HViwLA0-KL35oDF8/exec";
-    var timerInterval = null;
-    var html5QrCode = null;
-    var isCameraActive = false;
-    var currentEmpId = "";
-    var currentEmpName = "";
-    var currentDeviceId = "";
-    var TOLERANCE_MS = 30000; // 30 ثانية
+    var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
+    var currentEmpId = ""; var currentEmpName = ""; var currentDeviceId = "";
+    var TOLERANCE_MS = 30000; // 30 ثانية فترة سماح
 
-    function safeSetText(id, text) {
-      var el = document.getElementById(id);
-      if (el) el.innerText = text;
-    }
+    function safeSetText(id, text) { var el = document.getElementById(id); if (el) el.innerText = text; }
 
     function generateSafeFingerprint() {
       try {
@@ -155,209 +145,200 @@
         }
         var w = window.screen ? window.screen.width : 0;
         var h = window.screen ? window.screen.height : 0;
-        var screenMetrics = Math.min(w, h) + "x" + Math.max(w, h);
-        var cpuCores = navigator.hardwareConcurrency || 2;
-        var str = localUuid + "::" + screenMetrics + "::" + cpuCores;
+        var str = localUuid + "::" + (Math.min(w, h) + "x" + Math.max(w, h)) + "::" + (navigator.hardwareConcurrency || 2);
         var hash = 0;
-        for (var i = 0; i < str.length; i++) {
-          hash = ((hash << 5) - hash) + str.charCodeAt(i);
-          hash |= 0;
-        }
+        for (var i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
         return "HW-" + Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
-      } catch (err) {
-        return "HW-SAFE-" + Math.floor(Math.random() * 1000000);
-      }
+      } catch (err) { return "HW-SAFE-" + Math.floor(Math.random() * 1000000); }
     }
 
     function initApp() {
       currentDeviceId = generateSafeFingerprint();
       safeSetText("deviceIdDisplay", currentDeviceId);
-
-      try {
-        var savedId = localStorage.getItem("emp_id");
-        var savedName = localStorage.getItem("emp_name");
-        if (savedId && savedName) {
-          currentEmpId = savedId;
-          currentEmpName = savedName;
-          lockNameFieldPermanently(currentEmpName, currentEmpId);
-          unlockActionButtons();
-        }
-      } catch (e) {}
+      var savedId = localStorage.getItem("emp_id");
+      var savedName = localStorage.getItem("emp_name");
+      if (savedId && savedName) {
+        currentEmpId = savedId; currentEmpName = savedName;
+        lockNameFieldPermanently(currentEmpName, currentEmpId); unlockActionButtons();
+      }
       restoreWorkState();
     }
-
     initApp();
 
     function lockNameFieldPermanently(name, id) {
       var nameInput = document.getElementById("empNameInput");
-      var nameLabel = document.getElementById("empNameLabel");
       var regBtn = document.getElementById("registerBtn");
-      var notice = document.getElementById("lockedNotice");
-
       if (nameInput) { nameInput.value = name; nameInput.readOnly = true; nameInput.classList.add("locked-input"); }
-      if (nameLabel) nameLabel.innerHTML = 'اسم الموظف المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      document.getElementById("empNameLabel").innerHTML = 'اسم الموظف المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
       safeSetText("empIdDisplay", id);
       if (regBtn) regBtn.style.display = "none";
-      if (notice) notice.style.display = "block";
+      document.getElementById("lockedNotice").style.display = "block";
     }
 
     function showAlert(msg, type) {
       var b = document.getElementById("alertBox");
       if (b) {
-        b.innerText = msg;
-        b.className = "alert alert-" + type;
-        b.style.display = "block";
-        setTimeout(function() { b.style.display = "none"; }, 5000); // إخفاء التنبيه بعد 5 ثوانٍ
+        b.innerText = msg; b.className = "alert alert-" + type; b.style.display = "block";
+        setTimeout(function() { b.style.display = "none"; }, 6000);
       }
     }
 
+    // دوال جلب الموقع والـ IP للمصادقة الجغرافية والشبكية
+    async function fetchPublicIp() {
+      try {
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 3000);
+        var response = await fetch("https://api.ipify.org?format=json", { signal: controller.signal });
+        clearTimeout(timeoutId);
+        var json = await response.json();
+        return json.ip;
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function getGeoLocation() {
+      return new Promise(function(resolve, reject) {
+        if (!navigator.geolocation) {
+          resolve({ lat: 0, lng: 0 }); // تجاهل إذا لم يكن مدعوماً
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            function(pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+            function(err) { resolve({ lat: 0, lng: 0 }); }, // لا تمنع الإرسال إذا رفض الموقع، دع السيرفر يقرر
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+          );
+        }
+      });
+    }
+
+    // إرسال بيانات التسجيل الأول للسيرفر والانتظار
     async function handleInitialRegistration() {
       var nameInput = document.getElementById("empNameInput");
       var regBtn = document.getElementById("registerBtn");
       var name = nameInput ? nameInput.value.trim() : "";
 
       if (!name) { showAlert("يرجى إدخال اسمك الكامل أولاً", "error"); return; }
-      if (nameInput) nameInput.readOnly = true;
-      if (regBtn) { regBtn.disabled = true; regBtn.innerText = "⏳ جاري التثبيت..."; }
+      nameInput.readOnly = true; regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل في السيرفر...";
 
       var newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
-      try { localStorage.setItem("emp_name", name); localStorage.setItem("emp_id", newEmpId); } catch (e) {}
+      var payload = {
+        action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString()
+      };
 
-      currentEmpName = name;
-      currentEmpId = newEmpId;
+      try {
+        var response = await fetch(SCRIPT_URL, {
+          method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        var result = JSON.parse(await response.text());
 
-      lockNameFieldPermanently(currentEmpName, currentEmpId);
-      unlockActionButtons();
-      showAlert("🎉 تم تثبيت هويتك محلياً! سيتم الإرسال عند أول تسجيل حضور.", "success");
+        if (result.status === "SUCCESS" || result.status === "OK") {
+          localStorage.setItem("emp_name", name); localStorage.setItem("emp_id", newEmpId);
+          currentEmpName = name; currentEmpId = newEmpId;
+          lockNameFieldPermanently(currentEmpName, currentEmpId); unlockActionButtons();
+          showAlert("🎉 تم تسجيل هويتك وبصمة جهازك بنجاح!", "success");
+        } else {
+          showAlert("❌ فشل التسجيل: " + result.message, "error");
+          nameInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 إعادة المحاولة";
+        }
+      } catch (error) {
+        showAlert("فشل الاتصال بالخادم، تأكد من اتصال الإنترنت", "error");
+        nameInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
+      }
     }
 
     function unlockActionButtons() {
-      var scan = document.getElementById("scanBtn");
-      var manual = document.getElementById("manualSubmitBtn");
-      var warn = document.getElementById("lockWarning");
-      if (scan) scan.disabled = false;
-      if (manual) manual.disabled = false;
-      if (warn) warn.style.display = "none";
+      document.getElementById("scanBtn").disabled = false;
+      document.getElementById("manualSubmitBtn").disabled = false;
+      document.getElementById("lockWarning").style.display = "none";
     }
 
     function restoreWorkState() {
       var checkInTime = localStorage.getItem("check_in_time");
       var state = localStorage.getItem("attendance_state") || "OUT";
-      
-      if (state === "IN" && checkInTime) {
-        setWorkActive(parseInt(checkInTime, 10));
-      } else if (state === "OUT" && localStorage.getItem("last_checkout_duration")) {
-        setWorkCheckout(localStorage.getItem("last_checkout_duration"));
-      } else {
-        setWorkInactive();
-      }
+      if (state === "IN" && checkInTime) setWorkActive(parseInt(checkInTime, 10));
+      else if (state === "OUT" && localStorage.getItem("last_checkout_duration")) setWorkCheckout(localStorage.getItem("last_checkout_duration"));
+      else setWorkInactive();
     }
-
+    
     function setWorkActive(startTime) {
-      var dot = document.getElementById("statusDot");
-      var txt = document.getElementById("statusText");
-      if (dot) { dot.classList.remove("checkout"); dot.classList.add("active"); }
-      if (txt) txt.innerText = "تسجيل دخول";
+      document.getElementById("statusDot").className = "status-dot active"; document.getElementById("statusText").innerText = "تسجيل دخول";
       if (timerInterval) clearInterval(timerInterval);
-
-      var updateTimer = function() {
+      timerInterval = setInterval(function() {
         var diff = Date.now() - startTime;
-        var hours = Math.floor(diff / 3600000);
-        var minutes = Math.floor((diff % 3600000) / 60000);
-        var seconds = Math.floor((diff % 60000) / 1000);
-        safeSetText("timerDisplay", String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0'));
-      };
-      updateTimer();
-      timerInterval = setInterval(updateTimer, 1000);
+        var h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
+        safeSetText("timerDisplay", String(h).padStart(2,'0') + ":" + String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0'));
+      }, 1000);
     }
-
+    
     function setWorkCheckout(durationStr) {
-      var dot = document.getElementById("statusDot");
-      var txt = document.getElementById("statusText");
-      if (dot) { dot.classList.remove("active"); dot.classList.add("checkout"); }
-      if (txt) txt.innerText = "تم تسجيل الخروج";
-      if (timerInterval) clearInterval(timerInterval);
-      safeSetText("timerDisplay", durationStr || "00:00:00");
+      document.getElementById("statusDot").className = "status-dot checkout"; document.getElementById("statusText").innerText = "تم تسجيل الخروج";
+      if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", durationStr || "00:00:00");
     }
-
+    
     function setWorkInactive() {
-      var dot = document.getElementById("statusDot");
-      var txt = document.getElementById("statusText");
-      if (dot) { dot.classList.remove("active"); dot.classList.remove("checkout"); }
-      if (txt) txt.innerText = "بانتظار التسجيل";
-      if (timerInterval) clearInterval(timerInterval);
-      safeSetText("timerDisplay", "00:00:00");
+      document.getElementById("statusDot").className = "status-dot"; document.getElementById("statusText").innerText = "بانتظار التسجيل";
+      if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", "00:00:00");
     }
 
     async function toggleCamera() {
       if (isCameraActive) { await stopCamera(); return; }
-      if (typeof Html5Qrcode === "undefined") { showAlert("جاري تحميل قارئ الكاميرا...", "warning"); return; }
-
-      var readerBox = document.getElementById("reader-container");
-      var btn = document.getElementById("scanBtn");
-      if (readerBox) readerBox.style.display = "block";
-      if (btn) { btn.innerText = "⏳ تشغيل الكاميرا..."; btn.disabled = true; }
-
+      if (typeof Html5Qrcode === "undefined") { showAlert("جاري تحميل الكاميرا...", "warning"); return; }
+      document.getElementById("reader-container").style.display = "block";
+      var btn = document.getElementById("scanBtn"); btn.innerText = "⏳ تشغيل الكاميرا..."; btn.disabled = true;
       try {
         html5QrCode = new Html5Qrcode("reader");
         var devices = await Html5Qrcode.getCameras();
         var selectedId = devices && devices.length > 0 ? devices[devices.length - 1].id : null;
         await html5QrCode.start(selectedId ? selectedId : { facingMode: "environment" }, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, function(){});
-        isCameraActive = true;
-        if (btn) { btn.innerText = "🛑 إيقاف الكاميرا"; btn.className = "btn-danger"; btn.disabled = false; }
-      } catch (err) {
-        showAlert("خطأ الكاميرا: " + err.message, "error");
-        await stopCamera();
-      }
+        isCameraActive = true; btn.innerText = "🛑 إيقاف الكاميرا"; btn.className = "btn-danger"; btn.disabled = false;
+      } catch (err) { showAlert("خطأ الكاميرا", "error"); await stopCamera(); }
     }
-
+    
     async function stopCamera() {
       if (html5QrCode && isCameraActive) { try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {} }
-      isCameraActive = false;
-      var readerBox = document.getElementById("reader-container");
-      var btn = document.getElementById("scanBtn");
-      if (readerBox) readerBox.style.display = "none";
-      if (btn) { btn.innerText = "📷 تشغيل الكاميرا لمسح الرمز"; btn.className = "btn-primary"; btn.disabled = false; }
+      isCameraActive = false; document.getElementById("reader-container").style.display = "none";
+      var btn = document.getElementById("scanBtn"); btn.innerText = "📷 تشغيل الكاميرا لمسح الرمز"; btn.className = "btn-primary"; btn.disabled = false;
     }
-
+    
     async function onScanSuccess(decodedText) { await stopCamera(); processAttendance(decodedText); }
     
     function handleManualQrSubmit() {
-      var input = document.getElementById("manualQrInput");
-      var code = input ? input.value.trim() : "";
-      if (!code) { showAlert("يرجى إدخال الكود", "warning"); return; }
-      processAttendance(code);
+      var val = document.getElementById("manualQrInput").value.trim();
+      if (!val) { showAlert("يرجى إدخال الكود", "warning"); return; }
+      processAttendance(val);
     }
 
     async function processAttendance(qrText) {
       if (!currentEmpId) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
 
-      // 1. فحص فترة السماح (Tolerance Time)
+      // 1. فحص فترة السماح (30 ثانية)
       var lastScanTime = parseInt(localStorage.getItem("last_scan_time") || "0", 10);
       var now = Date.now();
       if (now - lastScanTime < TOLERANCE_MS) {
-        var remaining = Math.ceil((TOLERANCE_MS - (now - lastScanTime)) / 1000);
-        showAlert("⏳ يرجى الانتظار " + remaining + " ثانية قبل التسجيل مرة أخرى.", "warning");
-        return;
+        showAlert("⏳ يرجى الانتظار " + Math.ceil((TOLERANCE_MS - (now - lastScanTime)) / 1000) + " ثانية.", "warning"); return;
       }
 
       safeSetText("scannedResultText", qrText);
-      var box = document.getElementById("scannedResultBox");
-      if (box) box.style.display = "block";
-      showAlert("⏳ جاري تسجيل الحركة...", "warning");
-
-      // تحديث وقت آخر محاولة ناجحة لبدء فترة السماح
+      document.getElementById("scannedResultBox").style.display = "block";
+      showAlert("⏳ جاري التحقق من الموقع، الهوية، وتسجيل الحركة...", "warning");
       localStorage.setItem("last_scan_time", now.toString());
+
+      // 2. جلب إحداثيات GPS ورقم الـ IP للتحقق
+      var coords = await getGeoLocation();
+      var clientIp = await fetchPublicIp();
 
       var currentState = localStorage.getItem("attendance_state") || "OUT";
       var newAction = currentState === "OUT" ? "CHECK_IN" : "CHECK_OUT";
 
       var payload = {
-        action: newAction,
-        employeeId: currentEmpId,
-        employeeName: currentEmpName,
-        deviceFingerprint: currentDeviceId,
-        qrData: qrText,
+        action: "RECORD_ATTENDANCE", 
+        employeeId: currentEmpId, 
+        employeeName: currentEmpName, 
+        deviceFingerprint: currentDeviceId, 
+        qrData: qrText, 
+        latitude: coords.lat,
+        longitude: coords.lng,
+        clientIp: clientIp,
         timestamp: new Date().toISOString()
       };
 
@@ -367,50 +348,21 @@
         });
         var result = JSON.parse(await response.text());
 
-        // نتحقق من نجاح العملية (تأكد أن كود الـ Apps Script يعيد status: "SUCCESS" أو "OK")
         if (result.status === "SUCCESS" || result.status === "OK") { 
-          if (newAction === "CHECK_IN") {
-            localStorage.setItem("attendance_state", "IN");
-            localStorage.setItem("check_in_time", now.toString());
-            setWorkActive(now);
-            showAlert("✅ تم إرسال تسجيل الدخول بنجاح!", "success");
+          // الاعتماد على نتيجة السيرفر الفعلية لمعرفة الحركة (الدخول أم الخروج)
+          var verifiedAction = result.action || newAction;
+          
+          if (verifiedAction === "CHECK_IN") {
+            localStorage.setItem("attendance_state", "IN"); localStorage.setItem("check_in_time", now.toString());
+            setWorkActive(now); showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
           } else {
-            // حساب المدة
+            var totalHours = result.totalHours || "0.00"; // المدة القادمة من السيرفر
             var checkInTime = parseInt(localStorage.getItem("check_in_time") || now.toString(), 10);
             var diff = now - checkInTime;
-            var hours = Math.floor(diff / 3600000);
-            var minutes = Math.floor((diff % 3600000) / 60000);
-            var seconds = Math.floor((diff % 60000) / 1000);
-            var durationStr = String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0');
+            var durationStr = String(Math.floor(diff / 3600000)).padStart(2,'0') + ":" + String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0') + ":" + String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
             
-            localStorage.setItem("attendance_state", "OUT");
-            localStorage.setItem("last_checkout_duration", durationStr);
-            setWorkCheckout(durationStr);
-            showAlert("🚪 تم إرسال تسجيل الخروج بنجاح!", "success");
+            localStorage.setItem("attendance_state", "OUT"); localStorage.setItem("last_checkout_duration", durationStr);
+            setWorkCheckout(durationStr); showAlert("🚪 تم تسجيل الخروج بنجاح! المدة: " + totalHours + " ساعة", "success");
           }
         } else {
-          showAlert("❌ " + (result.message || "فشل التسجيل"), "error");
-          // التراجع عن فترة السماح في حال الفشل من السيرفر
-           localStorage.setItem("last_scan_time", "0");
-        }
-      } catch (error) {
-        showAlert("فشل الاتصال بالخادم", "error");
-        localStorage.setItem("last_scan_time", "0");
-      }
-    }
-  </script>
-  
-  <script async defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => {
-          console.log('SW Registration failed');
-        });
-      });
-    }
-  </script>
-</body>
-</html>
+          showAlert("❌ " + (result.message || "فشل التحقق"), "error
