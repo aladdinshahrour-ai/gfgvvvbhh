@@ -1,6 +1,6 @@
 {
-  "name": "نظام الحضور الموثوق",
-  "short_name": "الحضور",
+  "name": "time attendance",
+  "short_name": "attendance",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
