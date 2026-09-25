@@ -1,6 +1,6 @@
 // 🔴 هام جداً: في كل مرة تقوم فيها بتعديل كود index.html مستقبلاً،
 // يجب عليك تغيير هذا الرقم (مثلاً من v2 إلى v3 ثم v4) لكي تجبر هواتف الموظفين على التحديث.
-const CACHE_NAME = 'attendance-app-v3'; 
+const CACHE_NAME = 'attendance-app-v4'; 
 
 const ASSETS_TO_CACHE = [
   './',
