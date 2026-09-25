@@ -124,13 +124,14 @@
       </div>
     </div>
     </div>
-      <script>
+    <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
       if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ النظام: " + msg; }
       return false;
     };
 
+    // ⚠️ لا تنسَ وضع رابط Google Apps Script الفعلي هنا بين علامتي التنصيص
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBv-2SiU5eIBEnW0qmtez1IxNW5YVRg7bpzoa_yWyTU64rInLbOFOHZQYdFViDfB53/exec"; 
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
     var currentEmpId = ""; var currentEmpName = ""; var currentEmpEmail = ""; var currentDeviceId = "";
@@ -176,12 +177,17 @@
       if (nameInput) { nameInput.value = name; nameInput.readOnly = true; nameInput.classList.add("locked-input"); }
       if (emailInput) { emailInput.value = email; emailInput.readOnly = true; emailInput.classList.add("locked-input"); }
 
-      document.getElementById("empNameLabel").innerHTML = 'الاسم المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
-      document.getElementById("empEmailLabel").innerHTML = 'البريد المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      var nameLabel = document.getElementById("empNameLabel");
+      if(nameLabel) nameLabel.innerHTML = 'الاسم المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      
+      var emailLabel = document.getElementById("empEmailLabel");
+      if(emailLabel) emailLabel.innerHTML = 'البريد المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
       
       safeSetText("empIdDisplay", id);
       if (regBtn) regBtn.style.display = "none";
-      document.getElementById("lockedNotice").style.display = "block";
+      
+      var lockedNotice = document.getElementById("lockedNotice");
+      if(lockedNotice) lockedNotice.style.display = "block";
     }
 
     function showAlert(msg, type) {
@@ -228,9 +234,12 @@
     }
 
     function unlockActionButtons() {
-      document.getElementById("scanBtn").disabled = false;
-      document.getElementById("manualSubmitBtn").disabled = false;
-      document.getElementById("lockWarning").style.display = "none";
+      var scanBtn = document.getElementById("scanBtn");
+      var manualBtn = document.getElementById("manualSubmitBtn");
+      var lockWarn = document.getElementById("lockWarning");
+      if(scanBtn) scanBtn.disabled = false;
+      if(manualBtn) manualBtn.disabled = false;
+      if(lockWarn) lockWarn.style.display = "none";
     }
 
     function restoreWorkState() {
@@ -243,7 +252,11 @@
     
     // تسجيل الدخول (الضوء الأخضر وبدء العداد)
     function setWorkActive(startTime) {
-      document.getElementById("statusDot").className = "status-dot active"; document.getElementById("statusText").innerText = "تسجيل دخول";
+      var dot = document.getElementById("statusDot");
+      var txt = document.getElementById("statusText");
+      if(dot) dot.className = "status-dot active";
+      if(txt) txt.innerText = "تسجيل دخول";
+      
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(function() {
         var diff = Date.now() - startTime;
@@ -252,55 +265,77 @@
       }, 1000);
     }
     
-    // تسجيل الخروج (الضوء الأزرق وتوقف العداد)
+    // تسجيل الخروج (الضوء الأزرق وتجميد العداد)
     function setWorkCheckout(durationStr) {
-      document.getElementById("statusDot").className = "status-dot checkout"; document.getElementById("statusText").innerText = "تم تسجيل الخروج";
-      if (timerInterval) clearInterval(timerInterval); 
-      safeSetText("timerDisplay", durationStr || "00:00:00");
+      var dot = document.getElementById("statusDot");
+      if (dot) dot.className = "status-dot checkout"; // تطبيق اللون الأزرق
+      
+      var txt = document.getElementById("statusText");
+      if (txt) txt.innerText = "تم تسجيل الخروج";
+      
+      // إيقاف العداد فوراً حتى لا يستمر بالعمل في الخلفية
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      
+      // تجميد الرقم على الشاشة (منع عودته للصفر)
+      if (durationStr && durationStr !== "00:00:00") {
+        safeSetText("timerDisplay", durationStr);
+      }
     }
     
     function setWorkInactive() {
-      document.getElementById("statusDot").className = "status-dot"; document.getElementById("statusText").innerText = "بانتظار التسجيل";
+      var dot = document.getElementById("statusDot");
+      var txt = document.getElementById("statusText");
+      if(dot) dot.className = "status-dot";
+      if(txt) txt.innerText = "بانتظار التسجيل";
       if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", "00:00:00");
     }
 
-    // Camera setup
     async function toggleCamera() {
       if (isCameraActive) { await stopCamera(); return; }
       if (typeof Html5Qrcode === "undefined") { showAlert("جاري تحميل الكاميرا...", "warning"); return; }
-      document.getElementById("reader-container").style.display = "block";
-      var btn = document.getElementById("scanBtn"); btn.innerText = "⏳ تشغيل الكاميرا..."; btn.disabled = true;
+      var readerContainer = document.getElementById("reader-container");
+      if(readerContainer) readerContainer.style.display = "block";
+      var btn = document.getElementById("scanBtn"); 
+      if(btn) { btn.innerText = "⏳ تشغيل الكاميرا..."; btn.disabled = true; }
       try {
         html5QrCode = new Html5Qrcode("reader");
         var devices = await Html5Qrcode.getCameras();
         var selectedId = devices && devices.length > 0 ? devices[devices.length - 1].id : null;
         await html5QrCode.start(selectedId ? selectedId : { facingMode: "environment" }, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, function(){});
-        isCameraActive = true; btn.innerText = "🛑 إيقاف الكاميرا"; btn.className = "btn-danger"; btn.disabled = false;
+        isCameraActive = true; 
+        if(btn) { btn.innerText = "🛑 إيقاف الكاميرا"; btn.className = "btn-danger"; btn.disabled = false; }
       } catch (err) { showAlert("خطأ الكاميرا", "error"); await stopCamera(); }
     }
     
     async function stopCamera() {
       if (html5QrCode && isCameraActive) { try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {} }
-      isCameraActive = false; document.getElementById("reader-container").style.display = "none";
-      var btn = document.getElementById("scanBtn"); btn.innerText = "📷 تشغيل الكاميرا لمسح الرمز"; btn.className = "btn-primary"; btn.disabled = false;
+      isCameraActive = false; 
+      var readerContainer = document.getElementById("reader-container");
+      if(readerContainer) readerContainer.style.display = "none";
+      var btn = document.getElementById("scanBtn"); 
+      if(btn) { btn.innerText = "📷 تشغيل الكاميرا لمسح الرمز"; btn.className = "btn-primary"; btn.disabled = false; }
     }
     
     async function onScanSuccess(decodedText) { await stopCamera(); processAttendance(decodedText); }
     
     function handleManualQrSubmit() {
-      var val = document.getElementById("manualQrInput").value.trim();
+      var input = document.getElementById("manualQrInput");
+      var val = input ? input.value.trim() : "";
       if (!val) { showAlert("يرجى إدخال الكود", "warning"); return; }
       processAttendance(val);
     }
 
-    // دوال IP و GPS للـ Payload
+    // دوال جلب IP و GPS
     async function fetchPublicIp() { try { var r = await fetch("https://api.ipify.org?format=json"); var j = await r.json(); return j.ip; } catch(e){ return ""; } }
     function getGeoLocation() { return new Promise(function(resolve) { if(!navigator.geolocation) { resolve({lat:0, lng:0}); } else { navigator.geolocation.getCurrentPosition(function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude}); }, function(e){ resolve({lat:0, lng:0}); }, {timeout: 8000}); } }); }
 
     async function processAttendance(qrText) {
       if (!currentEmpId || !currentEmpEmail) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
 
-      // فحص فترة السماح
+      // فحص فترة السماح (تعمل فقط إذا تم التحديث بعد مسح ناجح)
       var lastScanTime = parseInt(localStorage.getItem("last_scan_time") || "0", 10);
       var now = Date.now();
       if (now - lastScanTime < TOLERANCE_MS) {
@@ -308,7 +343,8 @@
       }
 
       safeSetText("scannedResultText", qrText);
-      document.getElementById("scannedResultBox").style.display = "block";
+      var resultBox = document.getElementById("scannedResultBox");
+      if(resultBox) resultBox.style.display = "block";
       showAlert("⏳ جاري التحقق من الموقع، الهوية، وتسجيل الحركة...", "warning");
 
       var coords = await getGeoLocation();
@@ -323,38 +359,38 @@
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") { 
-          // 🔴 تفعيل Tolerance Time فقط عند النجاح
+          // 🔴 تفعيل Tolerance Time (حفظ الوقت) فقط عند النجاح
           localStorage.setItem("last_scan_time", Date.now().toString());
           
           var verifiedAction = result.action || newAction;
           
           if (verifiedAction === "CHECK_IN") {
-            localStorage.setItem("attendance_state", "IN"); localStorage.setItem("check_in_time", Date.now().toString());
-            setWorkActive(Date.now()); showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
-          } else {
-            var totalHours = result.totalHours || "0.00";
-            var checkInTime = parseInt(localStorage.getItem("check_in_time") || Date.now().toString(), 10);
-            var diff = Date.now() - checkInTime;
-            var durationStr = String(Math.floor(diff / 3600000)).padStart(2,'0') + ":" + String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0') + ":" + String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
+            localStorage.setItem("attendance_state", "IN"); 
+            localStorage.setItem("check_in_time", Date.now().toString());
+            setWorkActive(Date.now()); 
+            showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
             
-            localStorage.setItem("attendance_state", "OUT"); localStorage.setItem("last_checkout_duration", durationStr);
-            setWorkCheckout(durationStr); showAlert("🚪 تم تسجيل الخروج بنجاح! المدة: " + totalHours + " ساعة", "success");
+          } else {
+            // التقاط الوقت المعروض حالياً على الشاشة وتجميده فوراً (الانصراف)
+            var timerDisplay = document.getElementById("timerDisplay");
+            var frozenDisplayTime = timerDisplay ? timerDisplay.innerText : "00:00:00";
+            var totalHours = result.totalHours || "0.00";
+            
+            localStorage.setItem("attendance_state", "OUT"); 
+            localStorage.setItem("last_checkout_duration", frozenDisplayTime);
+            
+            setWorkCheckout(frozenDisplayTime); 
+            showAlert("🚪 تم تسجيل الخروج بنجاح! (المدة: " + totalHours + " ساعة)", "success");
           }
         } else {
           // لم يتم تحديث last_scan_time، مما يتيح للمستخدم إعادة المحاولة فورا
           showAlert("❌ " + (result.message || "فشل التحقق"), "error");
         }
       } catch (error) {
-        // لم يتم تحديث last_scan_time
         showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error");
       }
     }
-  </script>
-  <script async defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => { console.log('SW Registration failed'); }); });
-    }
-  </script>
+    </script>
+  
 </body>
 </html>
