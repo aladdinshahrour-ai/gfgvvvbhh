@@ -59,7 +59,9 @@
     <div class="container">
     <div class="card" id="identityCard">
       <h1>بيانات هوية الموظف</h1>
-      <div class="meta-box">
+      
+      <!-- 🔴 تم إخفاء هذا القسم بناءً على طلبك (display: none) -->
+      <div class="meta-box" style="display: none;">
         <div class="meta-item">
           <span>معرّف الموظف (ID):</span>
           <span class="meta-val" id="empIdDisplay">لم يتم التوليد بعد</span>
@@ -131,8 +133,7 @@
       return false;
     };
 
-    // ⚠️ لا تنسَ وضع رابط Google Apps Script الفعلي هنا بين علامتي التنصيص
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBv-2SiU5eIBEnW0qmtez1IxNW5YVRg7bpzoa_yWyTU64rInLbOFOHZQYdFViDfB53/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMQMC43MscaeIemXsK-9eyjfwKnFhUVua14NWNE7mGkioPzJW-24m4hMDCNSB8VuU3/exec"; 
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
     var currentEmpId = ""; var currentEmpName = ""; var currentEmpEmail = ""; var currentDeviceId = "";
     var TOLERANCE_MS = 30000; 
@@ -268,18 +269,16 @@
     // تسجيل الخروج (الضوء الأزرق وتجميد العداد)
     function setWorkCheckout(durationStr) {
       var dot = document.getElementById("statusDot");
-      if (dot) dot.className = "status-dot checkout"; // تطبيق اللون الأزرق
+      if (dot) dot.className = "status-dot checkout"; 
       
       var txt = document.getElementById("statusText");
       if (txt) txt.innerText = "تم تسجيل الخروج";
       
-      // إيقاف العداد فوراً حتى لا يستمر بالعمل في الخلفية
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
       }
       
-      // تجميد الرقم على الشاشة (منع عودته للصفر)
       if (durationStr && durationStr !== "00:00:00") {
         safeSetText("timerDisplay", durationStr);
       }
@@ -345,14 +344,28 @@
       safeSetText("scannedResultText", qrText);
       var resultBox = document.getElementById("scannedResultBox");
       if(resultBox) resultBox.style.display = "block";
-      showAlert("⏳ جاري التحقق من الموقع، الهوية، وتسجيل الحركة...", "warning");
+      showAlert("⏳ جاري التحقق وتسجيل الحركة...", "warning");
 
       var coords = await getGeoLocation();
       var clientIp = await fetchPublicIp();
+      
       var currentState = localStorage.getItem("attendance_state") || "OUT";
       var newAction = currentState === "OUT" ? "CHECK_IN" : "CHECK_OUT";
+      var statusParameter = currentState === "OUT" ? "دخول" : "خروج";
 
-      var payload = { action: "RECORD_ATTENDANCE", employeeId: currentEmpId, employeeName: currentEmpName, employeeEmail: currentEmpEmail, deviceFingerprint: currentDeviceId, qrData: qrText, latitude: coords.lat, longitude: coords.lng, clientIp: clientIp, timestamp: new Date().toISOString() };
+      var payload = { 
+        action: newAction, 
+        employeeStatus: statusParameter, 
+        employeeId: currentEmpId, 
+        employeeName: currentEmpName, 
+        employeeEmail: currentEmpEmail, 
+        deviceFingerprint: currentDeviceId, 
+        qrData: qrText, 
+        latitude: coords.lat, 
+        longitude: coords.lng, 
+        clientIp: clientIp, 
+        timestamp: new Date().toISOString() 
+      };
 
       try {
         var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
@@ -371,7 +384,7 @@
             showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
             
           } else {
-            // التقاط الوقت المعروض حالياً على الشاشة وتجميده فوراً (الانصراف)
+            // التقاط الوقت المعروض حالياً وتجميده (الانصراف)
             var timerDisplay = document.getElementById("timerDisplay");
             var frozenDisplayTime = timerDisplay ? timerDisplay.innerText : "00:00:00";
             var totalHours = result.totalHours || "0.00";
@@ -383,14 +396,20 @@
             showAlert("🚪 تم تسجيل الخروج بنجاح! (المدة: " + totalHours + " ساعة)", "success");
           }
         } else {
-          // لم يتم تحديث last_scan_time، مما يتيح للمستخدم إعادة المحاولة فورا
           showAlert("❌ " + (result.message || "فشل التحقق"), "error");
         }
       } catch (error) {
         showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error");
       }
     }
-    </script>
-  
+  </script>
+  <script async defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => { console.log('SW Registration failed'); }); });
+    }
+  </script>
 </body>
 </html>
+
+  
