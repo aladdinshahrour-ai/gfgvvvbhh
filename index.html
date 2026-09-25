@@ -55,8 +55,7 @@
     .alert-warning { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid #eab308; }
   </style>
 </head>
-<body>
-    <div class="container">
+<body>  <div class="container">
     <div class="card" id="identityCard">
       <h1>بيانات هوية الموظف</h1>
       
@@ -125,7 +124,7 @@
         (يرجى تثبيت الاسم والبريد في الأعلى أولاً)
       </div>
     </div>
-    </div>
+</div>
     <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
@@ -133,7 +132,7 @@
       return false;
     };
 
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMQMC43MscaeIemXsK-9eyjfwKnFhUVua14NWNE7mGkioPzJW-24m4hMDCNSB8VuU3/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZj-Uh_8CI4qBos91gmkYaLYoMLZJNaJBmj67VK_1oeHHknqsvivzAs5HuCVMT7Fnx/exec"; 
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
     var currentEmpId = ""; var currentEmpName = ""; var currentEmpEmail = ""; var currentDeviceId = "";
     var TOLERANCE_MS = 30000; 
@@ -412,4 +411,3 @@
 </body>
 </html>
 
-  
