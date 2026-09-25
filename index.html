@@ -69,10 +69,17 @@
           <span class="meta-val" id="deviceIdDisplay" style="font-size: 0.85rem;">جاري القراءة...</span>
         </div>
       </div>
+      
       <div class="form-group">
         <label for="empNameInput" id="empNameLabel">الاسم الكامل للموظف (يُدخل لمرة واحدة):</label>
         <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل هنا..." autocomplete="off">
       </div>
+      
+      <div class="form-group">
+        <label for="empEmailInput" id="empEmailLabel">بريد الشركة الإلكتروني (@fms-tech.com):</label>
+        <input type="email" id="empEmailInput" placeholder="أدخل بريدك هنا..." autocomplete="off" dir="ltr" style="text-align: left;">
+      </div>
+
       <button type="button" class="btn-submit" id="registerBtn" onclick="handleInitialRegistration()">
         🔒 تثبيت الحساب نهائياً على هذا الهاتف
       </button>
@@ -113,20 +120,20 @@
         <div id="scannedResultText" class="scanned-result-text">---</div>
       </div>
       <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-        (يرجى تثبيت الاسم في الأعلى أولاً لتفعيل خيارات التسجيل)
+        (يرجى تثبيت الاسم والبريد في الأعلى أولاً)
       </div>
     </div>
-  </div>
-  <script>
+    </div>
+      <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
       if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ النظام: " + msg; }
       return false;
     };
 
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8SyfLjGnRJ3gq0Qff-7fBwZdfg4I6QJzDZhSECDDlneNawrOS7X4MnZ1-AJIYp0Fl/exec"; 
+    var SCRIPT_URL = "ضع_رابط_Google_Script_الخاص_بك_هنا_بين_علامتي_التنصيص"; 
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
-    var currentEmpId = ""; var currentEmpName = ""; var currentDeviceId = "";
+    var currentEmpId = ""; var currentEmpName = ""; var currentEmpEmail = ""; var currentDeviceId = "";
     var TOLERANCE_MS = 30000; 
 
     function safeSetText(id, text) { var el = document.getElementById(id); if (el) el.innerText = text; }
@@ -152,19 +159,26 @@
       safeSetText("deviceIdDisplay", currentDeviceId);
       var savedId = localStorage.getItem("emp_id");
       var savedName = localStorage.getItem("emp_name");
-      if (savedId && savedName) {
-        currentEmpId = savedId; currentEmpName = savedName;
-        lockNameFieldPermanently(currentEmpName, currentEmpId); unlockActionButtons();
+      var savedEmail = localStorage.getItem("emp_email");
+      if (savedId && savedName && savedEmail) {
+        currentEmpId = savedId; currentEmpName = savedName; currentEmpEmail = savedEmail;
+        lockFieldsPermanently(currentEmpName, currentEmpEmail, currentEmpId); unlockActionButtons();
       }
       restoreWorkState();
     }
     initApp();
 
-    function lockNameFieldPermanently(name, id) {
+    function lockFieldsPermanently(name, email, id) {
       var nameInput = document.getElementById("empNameInput");
+      var emailInput = document.getElementById("empEmailInput");
       var regBtn = document.getElementById("registerBtn");
+
       if (nameInput) { nameInput.value = name; nameInput.readOnly = true; nameInput.classList.add("locked-input"); }
-      document.getElementById("empNameLabel").innerHTML = 'اسم الموظف المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      if (emailInput) { emailInput.value = email; emailInput.readOnly = true; emailInput.classList.add("locked-input"); }
+
+      document.getElementById("empNameLabel").innerHTML = 'الاسم المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      document.getElementById("empEmailLabel").innerHTML = 'البريد المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
+      
       safeSetText("empIdDisplay", id);
       if (regBtn) regBtn.style.display = "none";
       document.getElementById("lockedNotice").style.display = "block";
@@ -178,58 +192,38 @@
       }
     }
 
-    async function fetchPublicIp() {
-      try {
-        var controller = new AbortController();
-        var timeoutId = setTimeout(function() { controller.abort(); }, 3000);
-        var response = await fetch("https://api.ipify.org?format=json", { signal: controller.signal });
-        clearTimeout(timeoutId);
-        var json = await response.json();
-        return json.ip;
-      } catch (e) { return ""; }
-    }
-
-    function getGeoLocation() {
-      return new Promise(function(resolve, reject) {
-        if (!navigator.geolocation) {
-          resolve({ lat: 0, lng: 0 }); 
-        } else {
-          navigator.geolocation.getCurrentPosition(
-            function(pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-            function(err) { resolve({ lat: 0, lng: 0 }); }, 
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-          );
-        }
-      });
-    }
-
     async function handleInitialRegistration() {
       var nameInput = document.getElementById("empNameInput");
+      var emailInput = document.getElementById("empEmailInput");
       var regBtn = document.getElementById("registerBtn");
+      
       var name = nameInput ? nameInput.value.trim() : "";
+      var email = emailInput ? emailInput.value.trim().toLowerCase() : "";
 
-      if (!name) { showAlert("يرجى إدخال اسمك الكامل أولاً", "error"); return; }
-      nameInput.readOnly = true; regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل في السيرفر...";
+      if (!name) { showAlert("يرجى إدخال اسمك الكامل", "error"); return; }
+      if (!email || !email.endsWith("@fms-tech.com")) { showAlert("يجب إدخال بريد الشركة (ينتهي بـ @fms-tech.com)", "error"); return; }
+
+      nameInput.readOnly = true; emailInput.readOnly = true; regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل في السيرفر...";
 
       var newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
-      var payload = { action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString() };
+      var payload = { action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, employeeEmail: email, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString() };
 
       try {
         var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") {
-          localStorage.setItem("emp_name", name); localStorage.setItem("emp_id", newEmpId);
-          currentEmpName = name; currentEmpId = newEmpId;
-          lockNameFieldPermanently(currentEmpName, currentEmpId); unlockActionButtons();
+          localStorage.setItem("emp_name", name); localStorage.setItem("emp_id", newEmpId); localStorage.setItem("emp_email", email);
+          currentEmpName = name; currentEmpId = newEmpId; currentEmpEmail = email;
+          lockFieldsPermanently(currentEmpName, currentEmpEmail, currentEmpId); unlockActionButtons();
           showAlert("🎉 تم تسجيل هويتك وبصمة جهازك بنجاح!", "success");
         } else {
           showAlert("❌ فشل التسجيل: " + result.message, "error");
-          nameInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 إعادة المحاولة";
+          nameInput.readOnly = false; emailInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 إعادة المحاولة";
         }
       } catch (error) {
-        showAlert("فشل الاتصال بالخادم، تأكد من اتصال الإنترنت", "error");
-        nameInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
+        showAlert("فشل الاتصال بالخادم، تأكد من الانترنت", "error");
+        nameInput.readOnly = false; emailInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
       }
     }
 
@@ -247,6 +241,7 @@
       else setWorkInactive();
     }
     
+    // تسجيل الدخول (الضوء الأخضر وبدء العداد)
     function setWorkActive(startTime) {
       document.getElementById("statusDot").className = "status-dot active"; document.getElementById("statusText").innerText = "تسجيل دخول";
       if (timerInterval) clearInterval(timerInterval);
@@ -257,9 +252,11 @@
       }, 1000);
     }
     
+    // تسجيل الخروج (الضوء الأزرق وتوقف العداد)
     function setWorkCheckout(durationStr) {
       document.getElementById("statusDot").className = "status-dot checkout"; document.getElementById("statusText").innerText = "تم تسجيل الخروج";
-      if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", durationStr || "00:00:00");
+      if (timerInterval) clearInterval(timerInterval); 
+      safeSetText("timerDisplay", durationStr || "00:00:00");
     }
     
     function setWorkInactive() {
@@ -267,6 +264,7 @@
       if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", "00:00:00");
     }
 
+    // Camera setup
     async function toggleCamera() {
       if (isCameraActive) { await stopCamera(); return; }
       if (typeof Html5Qrcode === "undefined") { showAlert("جاري تحميل الكاميرا...", "warning"); return; }
@@ -295,9 +293,14 @@
       processAttendance(val);
     }
 
-    async function processAttendance(qrText) {
-      if (!currentEmpId) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
+    // دوال IP و GPS للـ Payload
+    async function fetchPublicIp() { try { var r = await fetch("https://api.ipify.org?format=json"); var j = await r.json(); return j.ip; } catch(e){ return ""; } }
+    function getGeoLocation() { return new Promise(function(resolve) { if(!navigator.geolocation) { resolve({lat:0, lng:0}); } else { navigator.geolocation.getCurrentPosition(function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude}); }, function(e){ resolve({lat:0, lng:0}); }, {timeout: 8000}); } }); }
 
+    async function processAttendance(qrText) {
+      if (!currentEmpId || !currentEmpEmail) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
+
+      // فحص فترة السماح
       var lastScanTime = parseInt(localStorage.getItem("last_scan_time") || "0", 10);
       var now = Date.now();
       if (now - lastScanTime < TOLERANCE_MS) {
@@ -307,40 +310,43 @@
       safeSetText("scannedResultText", qrText);
       document.getElementById("scannedResultBox").style.display = "block";
       showAlert("⏳ جاري التحقق من الموقع، الهوية، وتسجيل الحركة...", "warning");
-      localStorage.setItem("last_scan_time", now.toString());
 
       var coords = await getGeoLocation();
       var clientIp = await fetchPublicIp();
       var currentState = localStorage.getItem("attendance_state") || "OUT";
       var newAction = currentState === "OUT" ? "CHECK_IN" : "CHECK_OUT";
 
-      var payload = { action: "RECORD_ATTENDANCE", employeeId: currentEmpId, employeeName: currentEmpName, deviceFingerprint: currentDeviceId, qrData: qrText, latitude: coords.lat, longitude: coords.lng, clientIp: clientIp, timestamp: new Date().toISOString() };
+      var payload = { action: "RECORD_ATTENDANCE", employeeId: currentEmpId, employeeName: currentEmpName, employeeEmail: currentEmpEmail, deviceFingerprint: currentDeviceId, qrData: qrText, latitude: coords.lat, longitude: coords.lng, clientIp: clientIp, timestamp: new Date().toISOString() };
 
       try {
         var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") { 
+          // 🔴 تفعيل Tolerance Time فقط عند النجاح
+          localStorage.setItem("last_scan_time", Date.now().toString());
+          
           var verifiedAction = result.action || newAction;
           
           if (verifiedAction === "CHECK_IN") {
-            localStorage.setItem("attendance_state", "IN"); localStorage.setItem("check_in_time", now.toString());
-            setWorkActive(now); showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
+            localStorage.setItem("attendance_state", "IN"); localStorage.setItem("check_in_time", Date.now().toString());
+            setWorkActive(Date.now()); showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
           } else {
             var totalHours = result.totalHours || "0.00";
-            var checkInTime = parseInt(localStorage.getItem("check_in_time") || now.toString(), 10);
-            var diff = now - checkInTime;
+            var checkInTime = parseInt(localStorage.getItem("check_in_time") || Date.now().toString(), 10);
+            var diff = Date.now() - checkInTime;
             var durationStr = String(Math.floor(diff / 3600000)).padStart(2,'0') + ":" + String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0') + ":" + String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
             
             localStorage.setItem("attendance_state", "OUT"); localStorage.setItem("last_checkout_duration", durationStr);
             setWorkCheckout(durationStr); showAlert("🚪 تم تسجيل الخروج بنجاح! المدة: " + totalHours + " ساعة", "success");
           }
         } else {
+          // لم يتم تحديث last_scan_time، مما يتيح للمستخدم إعادة المحاولة فورا
           showAlert("❌ " + (result.message || "فشل التحقق"), "error");
-          localStorage.setItem("last_scan_time", "0"); 
         }
       } catch (error) {
-        showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error"); localStorage.setItem("last_scan_time", "0");
+        // لم يتم تحديث last_scan_time
+        showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error");
       }
     }
   </script>
@@ -352,4 +358,3 @@
   </script>
 </body>
 </html>
-
