@@ -20,119 +20,122 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 14px; min-height: 100vh; }
     .container { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 14px; }
+    
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     h1 { font-size: 1.15rem; text-align: center; margin-bottom: 12px; }
+    
     .form-group { margin-bottom: 12px; }
     label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
     input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.95rem; outline: none; }
     input:focus { border-color: var(--accent); }
-    input.locked-input { background-color: #0b1120 !important; border-color: #1e40af !important; color: #93c5fd !important; font-weight: bold; cursor: not-allowed; }
-    .meta-box { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px dashed var(--accent); margin-bottom: 12px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px; }
-    .meta-item { display: flex; justify-content: space-between; align-items: center; }
-    .meta-val { font-family: monospace; color: #60a5fa; font-weight: bold; }
+    
     .status-panel { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .status-badge { display: inline-flex; align-items: center; gap: 8px; background: #0f172a; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; border: 1px solid var(--border); }
     .status-dot { width: 12px; height: 12px; border-radius: 50%; background-color: #64748b; transition: all 0.3s ease; }
     .status-dot.active { background-color: var(--success); box-shadow: 0 0 14px var(--success); }
     .status-dot.checkout { background-color: var(--checkout); box-shadow: 0 0 14px var(--checkout); }
+    
     .timer-display { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+    .time-logs { font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; display: flex; flex-direction: column; gap: 4px; }
+    
     #reader-container { width: 100%; min-height: 250px; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); display: none; }
     #reader { width: 100% !important; }
-    .divider { display: flex; align-items: center; text-align: center; margin: 14px 0; color: var(--text-muted); font-size: 0.8rem; }
-    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+    
     .scanned-result-box { background: #0f172a; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; margin-top: 10px; display: none; }
     .scanned-result-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; margin-bottom: 4px; }
     .scanned-result-text { font-family: monospace; font-size: 0.8rem; color: #e2e8f0; word-break: break-all; background: rgba(255, 255, 255, 0.05); padding: 6px; border-radius: 6px; }
+    
     button { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-submit { background-color: #2563eb; color: white; }
     .btn-primary { background-color: var(--accent); color: white; }
-    .btn-success { background-color: #16a34a; color: white; }
     .btn-danger { background-color: var(--danger); color: white; }
+    
     .alert { padding: 12px; border-radius: 8px; font-size: 0.85rem; text-align: center; word-break: break-word; display: none; margin-bottom: 12px; }
     .alert-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
     .alert-error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
     .alert-warning { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid #eab308; }
+    
+    .employee-name-display { font-size: 1.2rem; font-weight: bold; color: var(--accent); text-align: center; margin-bottom: 10px; padding: 10px; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
+    
+    #registrationScreen { display: none; }
+    #mainScreen { display: none; }
   </style>
 </head>
-<body>  <div class="container">
-    <div class="card" id="identityCard">
-      <h1>بيانات هوية الموظف</h1>
-      
-      <!-- 🔴 تم إخفاء هذا القسم بناءً على طلبك (display: none) -->
-      <div class="meta-box" style="display: none;">
-        <div class="meta-item">
-          <span>معرّف الموظف (ID):</span>
-          <span class="meta-val" id="empIdDisplay">لم يتم التوليد بعد</span>
-        </div>
-        <div class="meta-item">
-          <span>بصمة العتاد (Hardware):</span>
-          <span class="meta-val" id="deviceIdDisplay" style="font-size: 0.85rem;">جاري القراءة...</span>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="empNameInput" id="empNameLabel">الاسم الكامل للموظف (يُدخل لمرة واحدة):</label>
-        <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل هنا..." autocomplete="off">
-      </div>
-      
-      <div class="form-group">
-        <label for="empEmailInput" id="empEmailLabel">بريد الشركة الإلكتروني (@fms-tech.com):</label>
-        <input type="email" id="empEmailInput" placeholder="أدخل بريدك هنا..." autocomplete="off" dir="ltr" style="text-align: left;">
-      </div>
-
-      <button type="button" class="btn-submit" id="registerBtn" onclick="handleInitialRegistration()">
-        🔒 تثبيت الحساب نهائياً على هذا الهاتف
-      </button>
-      <div id="lockedNotice" style="display: none; font-size: 0.8rem; color: #4ade80; text-align: center; margin-top: 8px;">
-        ✓ تم توثيق وتثبيت هويتك على هذا الجهاز بنجاح
-      </div>
-    </div>
-
-    <div class="card status-panel">
-      <div class="status-badge">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">بانتظار التسجيل</span>
-      </div>
-      <div class="timer-display" id="timerDisplay">00:00:00</div>
-    </div>
-
+<body>
+    <div class="container">
     <div id="alertBox" class="alert"></div>
 
-    <div class="card">
-      <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
-        تسجيل الحضور / الانصراف
-      </h2>
-      <div id="reader-container">
-        <div id="reader"></div>
-      </div>
-      <button id="scanBtn" class="btn-primary" onclick="toggleCamera()" disabled>
-        📷 تشغيل الكاميرا لمسح الرمز
-      </button>
-      <div class="divider">أو إدخال الرمز يدوياً</div>
-      <div class="form-group" style="margin-bottom: 8px;">
-        <input type="text" id="manualQrInput" placeholder="أدخل كود الـ QR المعتمد" dir="ltr" style="text-align: left;">
-      </div>
-      <button id="manualSubmitBtn" class="btn-success" onclick="handleManualQrSubmit()" disabled>
-        ✍️ تأكيد الحضور بالكود
-      </button>
-      <div id="scannedResultBox" class="scanned-result-box">
-        <div class="scanned-result-title">🔍 الرمز المعتمد:</div>
-        <div id="scannedResultText" class="scanned-result-text">---</div>
-      </div>
-      <div id="lockWarning" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-        (يرجى تثبيت الاسم والبريد في الأعلى أولاً)
+    <!-- شاشة التسجيل -->
+    <div id="registrationScreen">
+      <div class="card">
+        <h1>تسجيل موظف جديد</h1>
+        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 15px;">يتم ربط هذا الجهاز بهويتك بشكل دائم.</p>
+        
+        <div class="form-group">
+          <label for="empNameInput">الاسم الكامل:</label>
+          <input type="text" id="empNameInput" placeholder="أدخل اسمك الكامل..." autocomplete="off">
+        </div>
+        
+        <div class="form-group">
+          <label for="empEmailInput">بريد الشركة (@fms-tech.com):</label>
+          <input type="email" id="empEmailInput" placeholder="أدخل بريدك هنا..." autocomplete="off" dir="ltr" style="text-align: left;">
+        </div>
+
+        <button type="button" class="btn-submit" id="registerBtn" onclick="handleInitialRegistration()">
+          🔒 توثيق الحساب
+        </button>
       </div>
     </div>
-</div>
-    <script>
+
+    <!-- الشاشة الرئيسية -->
+    <div id="mainScreen">
+      <div class="card">
+        <h2 style="font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-bottom: 5px;">مرحباً بك</h2>
+        <div class="employee-name-display" id="displayEmpName">---</div>
+      </div>
+
+      <div class="card status-panel">
+        <div class="status-badge">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">بانتظار التسجيل</span>
+        </div>
+        <div class="timer-display" id="timerDisplay">00:00:00</div>
+        
+        <!-- سجل الأوقات أسفل العداد -->
+        <div class="time-logs">
+          <div id="checkInLogText">وقت الدخول: --:--:--</div>
+          <div id="checkOutLogText">وقت الخروج: --:--:--</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
+          تسجيل الحضور / الانصراف
+        </h2>
+        <div id="reader-container">
+          <div id="reader"></div>
+        </div>
+        <button id="scanBtn" class="btn-primary" onclick="toggleCamera()">
+          📷 تشغيل الكاميرا لمسح الرمز
+        </button>
+        
+        <div id="scannedResultBox" class="scanned-result-box">
+          <div class="scanned-result-title">🔍 الرمز الممسوح:</div>
+          <div id="scannedResultText" class="scanned-result-text">---</div>
+        </div>
+      </div>
+    </div>
+    </div>
+      <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
-      if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ النظام: " + msg; }
+      if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ: " + msg; }
       return false;
     };
 
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzX9Cs7bSbrNX4ktclGprSAXi2pgizl8NMBxFZ1b2tOGVH7h_KP5bzrU3t6NGM8mHzp/exec"; 
+    
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
     var currentEmpId = ""; var currentEmpName = ""; var currentEmpEmail = ""; var currentDeviceId = "";
     var TOLERANCE_MS = 30000; 
@@ -157,37 +160,28 @@
 
     function initApp() {
       currentDeviceId = generateSafeFingerprint();
-      safeSetText("deviceIdDisplay", currentDeviceId);
       var savedId = localStorage.getItem("emp_id");
       var savedName = localStorage.getItem("emp_name");
       var savedEmail = localStorage.getItem("emp_email");
+      
       if (savedId && savedName && savedEmail) {
         currentEmpId = savedId; currentEmpName = savedName; currentEmpEmail = savedEmail;
-        lockFieldsPermanently(currentEmpName, currentEmpEmail, currentEmpId); unlockActionButtons();
+        showMainScreen();
+      } else {
+        showRegistrationScreen();
       }
-      restoreWorkState();
     }
-    initApp();
+    
+    function showRegistrationScreen() {
+      document.getElementById("registrationScreen").style.display = "block";
+      document.getElementById("mainScreen").style.display = "none";
+    }
 
-    function lockFieldsPermanently(name, email, id) {
-      var nameInput = document.getElementById("empNameInput");
-      var emailInput = document.getElementById("empEmailInput");
-      var regBtn = document.getElementById("registerBtn");
-
-      if (nameInput) { nameInput.value = name; nameInput.readOnly = true; nameInput.classList.add("locked-input"); }
-      if (emailInput) { emailInput.value = email; emailInput.readOnly = true; emailInput.classList.add("locked-input"); }
-
-      var nameLabel = document.getElementById("empNameLabel");
-      if(nameLabel) nameLabel.innerHTML = 'الاسم المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
-      
-      var emailLabel = document.getElementById("empEmailLabel");
-      if(emailLabel) emailLabel.innerHTML = 'البريد المعتمد: <span style="color:#60a5fa;">🔒 (مقفل)</span>';
-      
-      safeSetText("empIdDisplay", id);
-      if (regBtn) regBtn.style.display = "none";
-      
-      var lockedNotice = document.getElementById("lockedNotice");
-      if(lockedNotice) lockedNotice.style.display = "block";
+    function showMainScreen() {
+      document.getElementById("registrationScreen").style.display = "none";
+      document.getElementById("mainScreen").style.display = "block";
+      safeSetText("displayEmpName", currentEmpName);
+      restoreWorkState();
     }
 
     function showAlert(msg, type) {
@@ -196,6 +190,11 @@
         b.innerText = msg; b.className = "alert alert-" + type; b.style.display = "block";
         setTimeout(function() { b.style.display = "none"; }, 6000);
       }
+    }
+
+    function getCurrentTimeString() {
+      var now = new Date();
+      return now.toLocaleTimeString('en-US', { hour12: false });
     }
 
     async function handleInitialRegistration() {
@@ -207,12 +206,12 @@
       var email = emailInput ? emailInput.value.trim().toLowerCase() : "";
 
       if (!name) { showAlert("يرجى إدخال اسمك الكامل", "error"); return; }
-      if (!email || !email.endsWith("@fms-tech.com")) { showAlert("يجب إدخال بريد الشركة (ينتهي بـ @fms-tech.com)", "error"); return; }
+      if (!email || !email.endsWith("@fms-tech.com")) { showAlert("يجب إدخال بريد الشركة (@fms-tech.com)", "error"); return; }
 
-      nameInput.readOnly = true; emailInput.readOnly = true; regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل في السيرفر...";
+      regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل...";
 
       var newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
-      var payload = { action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, employeeEmail: email, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString() };
+      var payload = { action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, employeeEmail: email, deviceFingerprint: currentDeviceId };
 
       try {
         var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
@@ -221,36 +220,32 @@
         if (result.status === "SUCCESS" || result.status === "OK") {
           localStorage.setItem("emp_name", name); localStorage.setItem("emp_id", newEmpId); localStorage.setItem("emp_email", email);
           currentEmpName = name; currentEmpId = newEmpId; currentEmpEmail = email;
-          lockFieldsPermanently(currentEmpName, currentEmpEmail, currentEmpId); unlockActionButtons();
-          showAlert("🎉 تم تسجيل هويتك وبصمة جهازك بنجاح!", "success");
+          showAlert("🎉 تم التسجيل بنجاح!", "success");
+          showMainScreen();
         } else {
-          showAlert("❌ فشل التسجيل: " + result.message, "error");
-          nameInput.readOnly = false; emailInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 إعادة المحاولة";
+          showAlert("❌ " + result.message, "error");
+          regBtn.disabled = false; regBtn.innerText = "🔒 توثيق الحساب";
         }
       } catch (error) {
         showAlert("فشل الاتصال بالخادم، تأكد من الانترنت", "error");
-        nameInput.readOnly = false; emailInput.readOnly = false; regBtn.disabled = false; regBtn.innerText = "🔒 تثبيت الحساب نهائياً على هذا الهاتف";
+        regBtn.disabled = false; regBtn.innerText = "🔒 توثيق الحساب";
       }
-    }
-
-    function unlockActionButtons() {
-      var scanBtn = document.getElementById("scanBtn");
-      var manualBtn = document.getElementById("manualSubmitBtn");
-      var lockWarn = document.getElementById("lockWarning");
-      if(scanBtn) scanBtn.disabled = false;
-      if(manualBtn) manualBtn.disabled = false;
-      if(lockWarn) lockWarn.style.display = "none";
     }
 
     function restoreWorkState() {
       var checkInTime = localStorage.getItem("check_in_time");
       var state = localStorage.getItem("attendance_state") || "OUT";
+      var recordedCheckIn = localStorage.getItem("log_check_in_str") || "--:--:--";
+      var recordedCheckOut = localStorage.getItem("log_check_out_str") || "--:--:--";
+      
+      safeSetText("checkInLogText", "وقت الدخول: " + recordedCheckIn);
+      safeSetText("checkOutLogText", "وقت الخروج: " + recordedCheckOut);
+
       if (state === "IN" && checkInTime) setWorkActive(parseInt(checkInTime, 10));
       else if (state === "OUT" && localStorage.getItem("last_checkout_duration")) setWorkCheckout(localStorage.getItem("last_checkout_duration"));
       else setWorkInactive();
     }
     
-    // تسجيل الدخول (الضوء الأخضر وبدء العداد)
     function setWorkActive(startTime) {
       var dot = document.getElementById("statusDot");
       var txt = document.getElementById("statusText");
@@ -265,22 +260,13 @@
       }, 1000);
     }
     
-    // تسجيل الخروج (الضوء الأزرق وتجميد العداد)
     function setWorkCheckout(durationStr) {
       var dot = document.getElementById("statusDot");
       if (dot) dot.className = "status-dot checkout"; 
-      
       var txt = document.getElementById("statusText");
       if (txt) txt.innerText = "تم تسجيل الخروج";
-      
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-      
-      if (durationStr && durationStr !== "00:00:00") {
-        safeSetText("timerDisplay", durationStr);
-      }
+      if (timerInterval) clearInterval(timerInterval);
+      if (durationStr && durationStr !== "00:00:00") safeSetText("timerDisplay", durationStr);
     }
     
     function setWorkInactive() {
@@ -288,7 +274,8 @@
       var txt = document.getElementById("statusText");
       if(dot) dot.className = "status-dot";
       if(txt) txt.innerText = "بانتظار التسجيل";
-      if (timerInterval) clearInterval(timerInterval); safeSetText("timerDisplay", "00:00:00");
+      if (timerInterval) clearInterval(timerInterval); 
+      safeSetText("timerDisplay", "00:00:00");
     }
 
     async function toggleCamera() {
@@ -319,21 +306,12 @@
     
     async function onScanSuccess(decodedText) { await stopCamera(); processAttendance(decodedText); }
     
-    function handleManualQrSubmit() {
-      var input = document.getElementById("manualQrInput");
-      var val = input ? input.value.trim() : "";
-      if (!val) { showAlert("يرجى إدخال الكود", "warning"); return; }
-      processAttendance(val);
-    }
-
-    // دوال جلب IP و GPS
     async function fetchPublicIp() { try { var r = await fetch("https://api.ipify.org?format=json"); var j = await r.json(); return j.ip; } catch(e){ return ""; } }
     function getGeoLocation() { return new Promise(function(resolve) { if(!navigator.geolocation) { resolve({lat:0, lng:0}); } else { navigator.geolocation.getCurrentPosition(function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude}); }, function(e){ resolve({lat:0, lng:0}); }, {timeout: 8000}); } }); }
 
     async function processAttendance(qrText) {
-      if (!currentEmpId || !currentEmpEmail) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
+      if (!currentEmpId || !currentEmpEmail) { showAlert("يرجى التسجيل أولاً", "error"); return; }
 
-      // فحص فترة السماح (تعمل فقط إذا تم التحديث بعد مسح ناجح)
       var lastScanTime = parseInt(localStorage.getItem("last_scan_time") || "0", 10);
       var now = Date.now();
       if (now - lastScanTime < TOLERANCE_MS) {
@@ -348,13 +326,8 @@
       var coords = await getGeoLocation();
       var clientIp = await fetchPublicIp();
       
-      var currentState = localStorage.getItem("attendance_state") || "OUT";
-      var newAction = currentState === "OUT" ? "CHECK_IN" : "CHECK_OUT";
-      var statusParameter = currentState === "OUT" ? "دخول" : "خروج";
-
       var payload = { 
-        action: newAction, 
-        employeeStatus: statusParameter, 
+        action: "RECORD_ATTENDANCE", 
         employeeId: currentEmpId, 
         employeeName: currentEmpName, 
         employeeEmail: currentEmpEmail, 
@@ -362,8 +335,7 @@
         qrData: qrText, 
         latitude: coords.lat, 
         longitude: coords.lng, 
-        clientIp: clientIp, 
-        timestamp: new Date().toISOString() 
+        clientIp: clientIp 
       };
 
       try {
@@ -371,36 +343,44 @@
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") { 
-          // 🔴 تفعيل Tolerance Time (حفظ الوقت) فقط عند النجاح
           localStorage.setItem("last_scan_time", Date.now().toString());
-          
-          var verifiedAction = result.action || newAction;
+          var verifiedAction = result.action;
+          var timeStr = getCurrentTimeString();
           
           if (verifiedAction === "CHECK_IN") {
             localStorage.setItem("attendance_state", "IN"); 
             localStorage.setItem("check_in_time", Date.now().toString());
+            localStorage.setItem("log_check_in_str", timeStr);
+            localStorage.setItem("log_check_out_str", "--:--:--"); 
+            
+            safeSetText("checkInLogText", "وقت الدخول: " + timeStr);
+            safeSetText("checkOutLogText", "وقت الخروج: --:--:--");
+            
             setWorkActive(Date.now()); 
             showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
             
           } else {
-            // التقاط الوقت المعروض حالياً وتجميده (الانصراف)
             var timerDisplay = document.getElementById("timerDisplay");
             var frozenDisplayTime = timerDisplay ? timerDisplay.innerText : "00:00:00";
-            var totalHours = result.totalHours || "0.00";
             
             localStorage.setItem("attendance_state", "OUT"); 
             localStorage.setItem("last_checkout_duration", frozenDisplayTime);
+            localStorage.setItem("log_check_out_str", timeStr);
+            
+            safeSetText("checkOutLogText", "وقت الخروج: " + timeStr);
             
             setWorkCheckout(frozenDisplayTime); 
-            showAlert("🚪 تم تسجيل الخروج بنجاح! (المدة: " + totalHours + " ساعة)", "success");
+            showAlert("🚪 تم تسجيل الخروج بنجاح!", "success");
           }
         } else {
           showAlert("❌ " + (result.message || "فشل التحقق"), "error");
         }
       } catch (error) {
-        showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error");
+        showAlert("فشل الاتصال بالخادم، تأكد من الإنترنت", "error");
       }
     }
+    
+    initApp();
   </script>
   <script async defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
@@ -410,4 +390,3 @@
   </script>
 </body>
 </html>
-
