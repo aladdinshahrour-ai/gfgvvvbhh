@@ -38,12 +38,10 @@
     .timer-display { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
     .time-logs { font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; display: flex; flex-direction: column; gap: 4px; }
     
-    #reader-container { width: 100%; min-height: 250px; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); display: none; }
-    #reader { width: 100% !important; }
-    
-    .scanned-result-box { background: #0f172a; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; margin-top: 10px; display: none; }
-    .scanned-result-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; margin-bottom: 4px; }
-    .scanned-result-text { font-family: monospace; font-size: 0.8rem; color: #e2e8f0; word-break: break-all; background: rgba(255, 255, 255, 0.05); padding: 6px; border-radius: 6px; }
+    /* تنسيق الكاميرا المنبثقة (ملء الشاشة) */
+    #reader-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+    #reader { width: 100%; max-width: 400px; border-radius: 16px; overflow: hidden; border: 2px solid var(--accent); background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    #closeCameraBtn { margin-top: 25px; max-width: 300px; }
     
     button { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -102,7 +100,6 @@
         </div>
         <div class="timer-display" id="timerDisplay">00:00:00</div>
         
-        <!-- سجل الأوقات أسفل العداد -->
         <div class="time-logs">
           <div id="checkInLogText">وقت الدخول: --:--:--</div>
           <div id="checkOutLogText">وقت الخروج: --:--:--</div>
@@ -113,21 +110,22 @@
         <h2 style="font-size: 0.95rem; margin-bottom: 12px; text-align: center; color: var(--text-muted);">
           تسجيل الحضور / الانصراف
         </h2>
-        <div id="reader-container">
-          <div id="reader"></div>
-        </div>
-        <button id="scanBtn" class="btn-primary" onclick="toggleCamera()">
+        
+        <button id="scanBtn" class="btn-primary" onclick="startCameraOverlay()">
           📷 تشغيل الكاميرا لمسح الرمز
         </button>
-        
-        <div id="scannedResultBox" class="scanned-result-box">
-          <div class="scanned-result-title">🔍 الرمز الممسوح:</div>
-          <div id="scannedResultText" class="scanned-result-text">---</div>
-        </div>
       </div>
     </div>
-    </div>
-      <script>
+  </div>
+
+  <!-- النافذة المنبثقة للكاميرا ملء الشاشة -->
+  <div id="reader-overlay">
+    <div id="reader"></div>
+    <button id="closeCameraBtn" class="btn-danger" onclick="stopCamera()">
+      🛑 إيقاف الكاميرا
+    </button>
+  </div>
+    <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
       if (b) { b.style.display = "block"; b.className = "alert alert-error"; b.innerText = "خطأ: " + msg; }
@@ -278,33 +276,43 @@
       safeSetText("timerDisplay", "00:00:00");
     }
 
-    async function toggleCamera() {
-      if (isCameraActive) { await stopCamera(); return; }
+    async function startCameraOverlay() {
       if (typeof Html5Qrcode === "undefined") { showAlert("جاري تحميل الكاميرا...", "warning"); return; }
-      var readerContainer = document.getElementById("reader-container");
-      if(readerContainer) readerContainer.style.display = "block";
-      var btn = document.getElementById("scanBtn"); 
-      if(btn) { btn.innerText = "⏳ تشغيل الكاميرا..."; btn.disabled = true; }
+      
+      var overlay = document.getElementById("reader-overlay");
+      overlay.style.display = "flex"; // إظهار النافذة ملء الشاشة
+      
       try {
         html5QrCode = new Html5Qrcode("reader");
         var devices = await Html5Qrcode.getCameras();
         var selectedId = devices && devices.length > 0 ? devices[devices.length - 1].id : null;
-        await html5QrCode.start(selectedId ? selectedId : { facingMode: "environment" }, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, function(){});
+        
+        await html5QrCode.start(
+          selectedId ? selectedId : { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          function(error) { /* تجاهل الأخطاء المستمرة لعدم التقاط الرمز */ }
+        );
         isCameraActive = true; 
-        if(btn) { btn.innerText = "🛑 إيقاف الكاميرا"; btn.className = "btn-danger"; btn.disabled = false; }
-      } catch (err) { showAlert("خطأ الكاميرا", "error"); await stopCamera(); }
+      } catch (err) {
+        showAlert("خطأ في تشغيل الكاميرا", "error");
+        await stopCamera();
+      }
     }
     
     async function stopCamera() {
-      if (html5QrCode && isCameraActive) { try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {} }
+      if (html5QrCode && isCameraActive) { 
+        try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {} 
+      }
       isCameraActive = false; 
-      var readerContainer = document.getElementById("reader-container");
-      if(readerContainer) readerContainer.style.display = "none";
-      var btn = document.getElementById("scanBtn"); 
-      if(btn) { btn.innerText = "📷 تشغيل الكاميرا لمسح الرمز"; btn.className = "btn-primary"; btn.disabled = false; }
+      var overlay = document.getElementById("reader-overlay");
+      if(overlay) overlay.style.display = "none"; // إخفاء النافذة تماماً
     }
     
-    async function onScanSuccess(decodedText) { await stopCamera(); processAttendance(decodedText); }
+    async function onScanSuccess(decodedText) { 
+      await stopCamera(); // إغلاق النافذة فور التقاط الرمز
+      processAttendance(decodedText); 
+    }
     
     async function fetchPublicIp() { try { var r = await fetch("https://api.ipify.org?format=json"); var j = await r.json(); return j.ip; } catch(e){ return ""; } }
     function getGeoLocation() { return new Promise(function(resolve) { if(!navigator.geolocation) { resolve({lat:0, lng:0}); } else { navigator.geolocation.getCurrentPosition(function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude}); }, function(e){ resolve({lat:0, lng:0}); }, {timeout: 8000}); } }); }
@@ -318,9 +326,6 @@
         showAlert("⏳ يرجى الانتظار " + Math.ceil((TOLERANCE_MS - (now - lastScanTime)) / 1000) + " ثانية.", "warning"); return;
       }
 
-      safeSetText("scannedResultText", qrText);
-      var resultBox = document.getElementById("scannedResultBox");
-      if(resultBox) resultBox.style.display = "block";
       showAlert("⏳ جاري التحقق وتسجيل الحركة...", "warning");
 
       var coords = await getGeoLocation();
