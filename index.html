@@ -7,7 +7,6 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   
-  <!-- إعدادات PWA (Progressive Web App) -->
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -41,8 +40,6 @@
     #reader { width: 100% !important; }
     .divider { display: flex; align-items: center; text-align: center; margin: 14px 0; color: var(--text-muted); font-size: 0.8rem; }
     .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
-    .divider:not(:empty)::before { margin-left: .5em; }
-    .divider:not(:empty)::after { margin-right: .5em; }
     .scanned-result-box { background: #0f172a; border: 1px solid var(--accent); border-radius: 10px; padding: 10px; margin-top: 10px; display: none; }
     .scanned-result-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; margin-bottom: 4px; }
     .scanned-result-text { font-family: monospace; font-size: 0.8rem; color: #e2e8f0; word-break: break-all; background: rgba(255, 255, 255, 0.05); padding: 6px; border-radius: 6px; }
@@ -59,8 +56,7 @@
   </style>
 </head>
 <body>
-
-  <div class="container">
+    <div class="container">
     <div class="card" id="identityCard">
       <h1>بيانات هوية الموظف</h1>
       <div class="meta-box">
@@ -121,7 +117,6 @@
       </div>
     </div>
   </div>
-
   <script>
     window.onerror = function(msg, url, line) {
       var b = document.getElementById("alertBox");
@@ -129,10 +124,10 @@
       return false;
     };
 
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiaEhwWIsSvSiY_JibIIqS2qQNWhCLDlsx42ZQ--TnA0WWbXI4HViwLA0-KL35oDF8/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiaEhwWIsSvSiY_JibIIqS2qQNWhCLDlsx42ZQ--TnA0WWbXI4HViwLA0-KL35oDF8/exec"; 
     var timerInterval = null; var html5QrCode = null; var isCameraActive = false;
     var currentEmpId = ""; var currentEmpName = ""; var currentDeviceId = "";
-    var TOLERANCE_MS = 30000; // 30 ثانية فترة سماح
+    var TOLERANCE_MS = 30000; 
 
     function safeSetText(id, text) { var el = document.getElementById(id); if (el) el.innerText = text; }
 
@@ -183,7 +178,6 @@
       }
     }
 
-    // دوال جلب الموقع والـ IP للمصادقة الجغرافية والشبكية
     async function fetchPublicIp() {
       try {
         var controller = new AbortController();
@@ -192,26 +186,23 @@
         clearTimeout(timeoutId);
         var json = await response.json();
         return json.ip;
-      } catch (e) {
-        return "";
-      }
+      } catch (e) { return ""; }
     }
 
     function getGeoLocation() {
       return new Promise(function(resolve, reject) {
         if (!navigator.geolocation) {
-          resolve({ lat: 0, lng: 0 }); // تجاهل إذا لم يكن مدعوماً
+          resolve({ lat: 0, lng: 0 }); 
         } else {
           navigator.geolocation.getCurrentPosition(
             function(pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-            function(err) { resolve({ lat: 0, lng: 0 }); }, // لا تمنع الإرسال إذا رفض الموقع، دع السيرفر يقرر
+            function(err) { resolve({ lat: 0, lng: 0 }); }, 
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
           );
         }
       });
     }
 
-    // إرسال بيانات التسجيل الأول للسيرفر والانتظار
     async function handleInitialRegistration() {
       var nameInput = document.getElementById("empNameInput");
       var regBtn = document.getElementById("registerBtn");
@@ -221,14 +212,10 @@
       nameInput.readOnly = true; regBtn.disabled = true; regBtn.innerText = "⏳ جاري التسجيل في السيرفر...";
 
       var newEmpId = "EMP-" + Math.floor(100000 + Math.random() * 900000);
-      var payload = {
-        action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString()
-      };
+      var payload = { action: "REGISTER_EMPLOYEE", employeeId: newEmpId, employeeName: name, deviceFingerprint: currentDeviceId, timestamp: new Date().toISOString() };
 
       try {
-        var response = await fetch(SCRIPT_URL, {
-          method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" }
-        });
+        var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") {
@@ -311,7 +298,6 @@
     async function processAttendance(qrText) {
       if (!currentEmpId) { showAlert("يرجى تثبيت الهوية أولاً", "error"); return; }
 
-      // 1. فحص فترة السماح (30 ثانية)
       var lastScanTime = parseInt(localStorage.getItem("last_scan_time") || "0", 10);
       var now = Date.now();
       if (now - lastScanTime < TOLERANCE_MS) {
@@ -323,40 +309,25 @@
       showAlert("⏳ جاري التحقق من الموقع، الهوية، وتسجيل الحركة...", "warning");
       localStorage.setItem("last_scan_time", now.toString());
 
-      // 2. جلب إحداثيات GPS ورقم الـ IP للتحقق
       var coords = await getGeoLocation();
       var clientIp = await fetchPublicIp();
-
       var currentState = localStorage.getItem("attendance_state") || "OUT";
       var newAction = currentState === "OUT" ? "CHECK_IN" : "CHECK_OUT";
 
-      var payload = {
-        action: "RECORD_ATTENDANCE", 
-        employeeId: currentEmpId, 
-        employeeName: currentEmpName, 
-        deviceFingerprint: currentDeviceId, 
-        qrData: qrText, 
-        latitude: coords.lat,
-        longitude: coords.lng,
-        clientIp: clientIp,
-        timestamp: new Date().toISOString()
-      };
+      var payload = { action: "RECORD_ATTENDANCE", employeeId: currentEmpId, employeeName: currentEmpName, deviceFingerprint: currentDeviceId, qrData: qrText, latitude: coords.lat, longitude: coords.lng, clientIp: clientIp, timestamp: new Date().toISOString() };
 
       try {
-        var response = await fetch(SCRIPT_URL, {
-          method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" }
-        });
+        var response = await fetch(SCRIPT_URL, { method: "POST", mode: "cors", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain;charset=utf-8" } });
         var result = JSON.parse(await response.text());
 
         if (result.status === "SUCCESS" || result.status === "OK") { 
-          // الاعتماد على نتيجة السيرفر الفعلية لمعرفة الحركة (الدخول أم الخروج)
           var verifiedAction = result.action || newAction;
           
           if (verifiedAction === "CHECK_IN") {
             localStorage.setItem("attendance_state", "IN"); localStorage.setItem("check_in_time", now.toString());
             setWorkActive(now); showAlert("✅ تم تسجيل الدخول بنجاح!", "success");
           } else {
-            var totalHours = result.totalHours || "0.00"; // المدة القادمة من السيرفر
+            var totalHours = result.totalHours || "0.00";
             var checkInTime = parseInt(localStorage.getItem("check_in_time") || now.toString(), 10);
             var diff = now - checkInTime;
             var durationStr = String(Math.floor(diff / 3600000)).padStart(2,'0') + ":" + String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0') + ":" + String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
@@ -365,4 +336,20 @@
             setWorkCheckout(durationStr); showAlert("🚪 تم تسجيل الخروج بنجاح! المدة: " + totalHours + " ساعة", "success");
           }
         } else {
-          showAlert("❌ " + (result.message || "فشل التحقق"), "error
+          showAlert("❌ " + (result.message || "فشل التحقق"), "error");
+          localStorage.setItem("last_scan_time", "0"); 
+        }
+      } catch (error) {
+        showAlert("فشل الاتصال بالخادم، قد يكون بسبب ضعف الشبكة", "error"); localStorage.setItem("last_scan_time", "0");
+      }
+    }
+  </script>
+  <script async defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => { console.log('SW Registration failed'); }); });
+    }
+  </script>
+</body>
+</html>
+
